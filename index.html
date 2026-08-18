@@ -371,7 +371,7 @@ function COMP() {
   var vistos = {};
   var lista = [];
   AT().forEach(function(r){
-    var c = r['Competencia (AAAA-MM)'];
+    var c = r['Competência (AAAA-MM)'];
     if (c && c !== 'Agrupado' && !vistos[c]) { vistos[c] = true; lista.push(c); }
   });
   lista.sort();
@@ -379,7 +379,7 @@ function COMP() {
 }
 
 function atividadesCompetencia(comp) {
-  return AT().filter(function(r){ return r['Competencia (AAAA-MM)'] === comp; });
+  return AT().filter(function(r){ return r['Competência (AAAA-MM)'] === comp; });
 }
 
 function fmtComp(c) {
@@ -393,7 +393,7 @@ function fmtComp(c) {
 function bcl(st) {
   if (!st) return 'bP';
   var s = st.toLowerCase().trim();
-  if (s === 'completo' || s === 'concluida' || s === 'realizado') return 'bR';
+  if (s === 'completo' || s === 'concluída' || s === 'realizado') return 'bR';
   if (s === 'no prazo') return 'bT';
   if (s === 'insuficiente' || s === 'em risco') return 'bA';
   if (s === 'atrasada' || s.indexOf('alerta') === 0 || s.indexOf('erro') === 0 || s === 'critico') return 'bC';
@@ -492,7 +492,7 @@ function renderDash() {
     mh += '<tr><th>ID</th><th>Entregável</th><th>Quantidade Prevista (Plano de Trabalho)</th><th>Realizado (Completo)</th><th>Status</th></tr>';
     metas.forEach(function(m){
       mh += '<tr><td><strong>'+(m['ID Meta']||'-')+'</strong></td>';
-      mh += '<td style="max-width:260px">'+(m['Descricao da Meta']||'-')+'</td>';
+      mh += '<td style="max-width:260px">'+(m['Descrição da Meta']||'-')+'</td>';
       mh += '<td style="font-size:11px">'+(m['Quantidade Prevista']||'-')+'</td>';
       mh += '<td style="text-align:center">'+(m['Quantidade Realizada']||0)+'</td>';
       mh += '<td><span class="badge '+bcl(m['Status']||'Pendente')+'">'+(m['Status']||'Pendente')+'</span></td></tr>';
@@ -511,9 +511,9 @@ function renderDash() {
     slh += '<div class="card" style="padding:0;overflow:auto"><table class="tbl">';
     slh += '<tr><th>Competência</th><th>Atividade</th><th>Observação</th></tr>';
     slRows.forEach(function(r){
-      slh += '<tr><td><strong>'+fmtComp(r['Competencia (AAAA-MM)']||'-')+'</strong></td>';
+      slh += '<tr><td><strong>'+fmtComp(r['Competência (AAAA-MM)']||'-')+'</strong></td>';
       slh += '<td>'+(r['Nome da Atividade']||'-')+'</td>';
-      slh += '<td style="font-size:11px;color:#888">'+(r['Observacao']||'-')+'</td></tr>';
+      slh += '<td style="font-size:11px;color:#888">'+(r['Observação']||'-')+'</td></tr>';
     });
     slh += '</table></div>';
   }
@@ -568,9 +568,9 @@ function renderDetalhe(idx) {
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
     h += '<div class="osnome">'+(r['Nome da Atividade']||'-')+'</div>';
     h += '<span class="badge '+bcl(st)+'">'+st+'</span></div>';
-    h += '<div class="osfase">'+(r['Entregavel']||'-')+(r['Modalidade'] && r['Modalidade']!=='Continua' && r['Modalidade']!=='Unica' ? ' - '+r['Modalidade'] : '')+'</div>';
+    h += '<div class="osfase">'+(r['Entregável']||'-')+(r['Modalidade'] && r['Modalidade']!=='Contínua' && r['Modalidade']!=='Única' ? ' - '+r['Modalidade'] : '')+'</div>';
     if (r['Link da Pasta Drive']) h += '<a class="oslink" href="'+r['Link da Pasta Drive']+'" target="_blank">Abrir pasta no Drive</a>';
-    else h += '<div style="font-size:11px;color:#ccc;margin-top:6px">'+(r['Observacao']||'Sem link registrado')+'</div>';
+    else h += '<div style="font-size:11px;color:#ccc;margin-top:6px">'+(r['Observação']||'Sem link registrado')+'</div>';
     h += '</div>';
   });
   h += '</div>';
@@ -586,7 +586,7 @@ function renderMetas(fEnt) {
   var metas = MT();
   var entregaveisUnicos = [];
   metas.forEach(function(m){
-    var e = m['Entregavel'];
+    var e = m['Entregável'];
     if (e && entregaveisUnicos.indexOf(e) === -1) entregaveisUnicos.push(e);
   });
 
@@ -597,7 +597,7 @@ function renderMetas(fEnt) {
   });
   document.getElementById('flt-metas').innerHTML = fb;
 
-  var fil = fEnt==='Todos' ? metas : metas.filter(function(m){ return m['Entregavel']===fEnt; });
+  var fil = fEnt==='Todos' ? metas : metas.filter(function(m){ return m['Entregável']===fEnt; });
   if (!fil.length) {
     document.getElementById('tbl-metas').innerHTML='<div class="card" style="color:#666;font-size:13px">Nenhuma meta registrada para este filtro.</div>';
     return;
@@ -607,12 +607,12 @@ function renderMetas(fEnt) {
   fil.forEach(function(m){
     h += '<tr>';
     h += '<td><strong>'+(m['ID Meta']||'-')+'</strong></td>';
-    h += '<td style="white-space:nowrap;font-size:11px">'+(m['Entregavel']||'-')+'</td>';
-    h += '<td style="max-width:220px">'+(m['Descricao da Meta']||'-')+'</td>';
+    h += '<td style="white-space:nowrap;font-size:11px">'+(m['Entregável']||'-')+'</td>';
+    h += '<td style="max-width:220px">'+(m['Descrição da Meta']||'-')+'</td>';
     h += '<td style="font-size:11px">'+(m['Quantidade Prevista']||'-')+'</td>';
     h += '<td style="text-align:center">'+(m['Quantidade Realizada']||0)+'</td>';
     h += '<td><span class="badge '+bcl(m['Status']||'Pendente')+'">'+(m['Status']||'Pendente')+'</span></td>';
-    h += '<td style="font-size:10px;color:#888;max-width:220px">'+(m['Observacao']||'-')+'</td>';
+    h += '<td style="font-size:10px;color:#888;max-width:220px">'+(m['Observação']||'-')+'</td>';
     h += '</tr>';
   });
   h += '</table></div>';
@@ -636,7 +636,7 @@ function renderPastas() {
       var lk = r['Link da Pasta Drive'] || '';
       html += '<div class="pcard ' + statusCardCls(st) + '">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">';
-      html += '<div class="pcard-os">' + (r['Codigo Atividade']||'-') + '</div>';
+      html += '<div class="pcard-os">' + (r['Código Atividade']||'-') + '</div>';
       html += '<span class="badge ' + bcl(st) + '" style="font-size:9px;padding:2px 7px">' + st + '</span>';
       html += '</div>';
       html += '<div class="pcard-ativ">' + (r['Nome da Atividade']||'-') + '</div>';
@@ -651,7 +651,7 @@ function renderPastas() {
   });
 
   // Atividades agrupadas (Diagnosticos e Consultorias), sem competencia mensal
-  var agrupadas = AT().filter(function(r){ return r['Competencia (AAAA-MM)'] === 'Agrupado'; });
+  var agrupadas = AT().filter(function(r){ return r['Competência (AAAA-MM)'] === 'Agrupado'; });
   if (agrupadas.length) {
     html += '<div class="pterr-grupo">';
     html += '<div class="pterr-nome">Fomento a Negócios Locais (pasta única, sem recorte mensal)</div>';
@@ -661,7 +661,7 @@ function renderPastas() {
       var lk = r['Link da Pasta Drive'] || '';
       html += '<div class="pcard ' + statusCardCls(st) + '">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">';
-      html += '<div class="pcard-os">' + (r['Codigo Atividade']||'-') + '</div>';
+      html += '<div class="pcard-os">' + (r['Código Atividade']||'-') + '</div>';
       html += '<span class="badge ' + bcl(st) + '" style="font-size:9px;padding:2px 7px">' + st + '</span>';
       html += '</div>';
       html += '<div class="pcard-ativ">' + (r['Nome da Atividade']||'-') + '</div>';
