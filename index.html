@@ -208,7 +208,7 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:16px">
           <div>
             <div style="font-family:Montserrat,sans-serif;font-size:14px;font-weight:700;color:var(--az)">Prospera GO - Núcleo Goiás - Vigência 21/10/2025 a 21/10/2026</div>
-            <div style="font-size:11px;color:#888;margin-top:3px">Percentual de atividades com evidência depositada na subpasta EVIDENCIAS, entre as atividades já com pasta criada no Drive</div>
+            <div style="font-size:11px;color:#888;margin-top:3px">Percentual de atividades com status Completo (lista de presença + fotos mínimas, ou relatório oficial exigido pelo Plano de Trabalho, conforme o tipo de atividade)</div>
           </div>
           <div id="sc-txt" style="font-family:Montserrat,sans-serif;font-size:44px;font-weight:700;color:var(--azs);white-space:nowrap">--</div>
         </div>
@@ -243,7 +243,7 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
     <!-- METAS -->
     <div class="vw" id="vw-metas">
       <div class="st">Acompanhamento de Metas e Indicadores</div>
-      <div style="font-size:11px;color:#888;margin-bottom:16px">A coluna "Pastas com Evidência" mostra quantas pastas de atividade ligadas a esta meta já têm arquivo depositado. A conferência da quantidade oficial do Plano de Trabalho (número exato de questionários, oficinas, diagnósticos etc) é manual, feita pela coordenação.</div>
+      <div style="font-size:11px;color:#888;margin-bottom:16px">A coluna "Realizado (Completo)" conta só atividades que atendem o critério oficial do Plano de Trabalho (lista de presença + fotos mínimas, ou relatório exigido). Atividades Insuficientes, Pendentes ou em Alerta de Duplicidade nunca contam. O Status de prazo (No Prazo / Em Risco / Atrasada) compara o progresso com a janela do cronograma de cada meta.</div>
       <div class="fbar" id="flt-metas"></div>
       <div id="tbl-metas"></div>
     </div>
@@ -391,11 +391,24 @@ function fmtComp(c) {
 
 function bcl(st) {
   if (!st) return 'bP';
-  var s = st.toLowerCase();
-  if (s === 'realizado') return 'bR';
-  if (s === 'critico') return 'bC';
+  var s = st.toLowerCase().trim();
+  if (s === 'completo' || s === 'concluida' || s === 'realizado') return 'bR';
+  if (s === 'no prazo') return 'bT';
+  if (s === 'insuficiente' || s === 'em risco') return 'bA';
+  if (s === 'atrasada' || s.indexOf('alerta') === 0 || s.indexOf('erro') === 0 || s === 'critico') return 'bC';
   if (s === 'em andamento') return 'bE';
-  return 'bP';
+  if (s === 'conferir manualmente') return 'bE';
+  return 'bP'; // pendente e qualquer status nao mapeado
+}
+
+// Classe CSS de borda do card (oscard/pcard) - usa mapa dedicado em
+// vez da primeira letra do status, ja que "Atrasada" e "Alerta:..."
+// colidiriam ambos em "A"
+function statusCardCls(st) {
+  var c = bcl(st);
+  if (c === 'bR') return 'stR';
+  if (c === 'bC' || c === 'bA') return 'stP'; // borda de atencao (laranja) para Insuficiente/Em Risco/Atrasada/Alerta/Erro
+  return 'stP';
 }
 
 function scl(n) {
@@ -408,14 +421,14 @@ function scl(n) {
 function scComp(comp) {
   var rows = atividadesCompetencia(comp);
   if (!rows.length) return 0;
-  var realizadas = rows.filter(function(r){ return (r['Status']||'').trim() === 'Realizado'; }).length;
+  var realizadas = rows.filter(function(r){ return (r['Status']||'').trim() === 'Completo'; }).length;
   return Math.round((realizadas / rows.length) * 100);
 }
 
 function scG() {
   var rows = AT();
   if (!rows.length) return 0;
-  var realizadas = rows.filter(function(r){ return (r['Status']||'').trim() === 'Realizado'; }).length;
+  var realizadas = rows.filter(function(r){ return (r['Status']||'').trim() === 'Completo'; }).length;
   return Math.round((realizadas / rows.length) * 100);
 }
 
@@ -438,7 +451,7 @@ function kpi(n,l) {
 
 function renderDash() {
   var rows = AT();
-  var real = rows.filter(function(r){ return (r['Status']||'') === 'Realizado'; }).length;
+  var real = rows.filter(function(r){ return (r['Status']||'') === 'Completo'; }).length;
   var semLink = rows.filter(function(r){ return !(r['Link da Pasta Drive']||'').trim(); }).length;
   var comps = COMP();
 
@@ -458,7 +471,7 @@ function renderDash() {
   comps.forEach(function(c,i){
     var sc = scComp(c);
     var rowsC = atividadesCompetencia(c);
-    var realC = rowsC.filter(function(r){ return (r['Status']||'') === 'Realizado'; }).length;
+    var realC = rowsC.filter(function(r){ return (r['Status']||'') === 'Completo'; }).length;
     th += '<div class="tcard" onclick="goV(\'competencias\');setTimeout(function(){abrirComp('+i+')},120)">';
     th += '<div class="tnome">'+fmtComp(c)+'</div>';
     th += '<div class="tsc">'+sc+'%</div>';
@@ -475,7 +488,7 @@ function renderDash() {
     mh = '<div class="card" style="color:#666;font-size:13px">Nenhuma meta registrada ainda.</div>';
   } else {
     mh += '<div class="card" style="padding:0;overflow:auto"><table class="tbl">';
-    mh += '<tr><th>ID</th><th>Entregável</th><th>Quantidade Prevista (Plano de Trabalho)</th><th>Pastas com Evidência</th><th>Status</th></tr>';
+    mh += '<tr><th>ID</th><th>Entregável</th><th>Quantidade Prevista (Plano de Trabalho)</th><th>Realizado (Completo)</th><th>Status</th></tr>';
     metas.forEach(function(m){
       mh += '<tr><td><strong>'+(m['ID Meta']||'-')+'</strong></td>';
       mh += '<td style="max-width:260px">'+(m['Descricao da Meta']||'-')+'</td>';
@@ -514,7 +527,7 @@ function renderListaComp() {
   COMP().forEach(function(c,i){
     var sc = scComp(c);
     var rowsC = atividadesCompetencia(c);
-    var realC = rowsC.filter(function(r){ return (r['Status']||'') === 'Realizado'; }).length;
+    var realC = rowsC.filter(function(r){ return (r['Status']||'') === 'Completo'; }).length;
     h += '<div class="tcard" onclick="abrirComp('+i+')">';
     h += '<div class="tnome">'+fmtComp(c)+'</div>';
     h += '<div class="tsc">'+sc+'%</div>';
@@ -533,7 +546,7 @@ function renderDetalhe(idx) {
   var comp = COMP()[idx];
   var cR = atividadesCompetencia(comp);
   var sc = scComp(comp);
-  var rl = cR.filter(function(r){ return (r['Status']||'') === 'Realizado'; }).length;
+  var rl = cR.filter(function(r){ return (r['Status']||'') === 'Completo'; }).length;
   var h = '';
 
   h += '<div class="card" style="background:var(--az);padding:22px 26px;margin-bottom:20px">';
@@ -550,7 +563,7 @@ function renderDetalhe(idx) {
   h += '<div class="g3">';
   cR.forEach(function(r){
     var st = r['Status'] || 'Pendente';
-    h += '<div class="oscard st'+st.charAt(0)+'">';
+    h += '<div class="oscard '+statusCardCls(st)+'">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">';
     h += '<div class="osnome">'+(r['Nome da Atividade']||'-')+'</div>';
     h += '<span class="badge '+bcl(st)+'">'+st+'</span></div>';
@@ -589,7 +602,7 @@ function renderMetas(fEnt) {
     return;
   }
   var h = '<div class="card" style="padding:0;overflow:auto"><table class="tbl">';
-  h += '<tr><th>ID</th><th>Entregável</th><th>Descrição</th><th>Quantidade Prevista</th><th>Pastas com Evidência</th><th>Status</th><th>Observação</th></tr>';
+  h += '<tr><th>ID</th><th>Entregável</th><th>Descrição</th><th>Quantidade Prevista</th><th>Realizado (Completo)</th><th>Status</th><th>Observação</th></tr>';
   fil.forEach(function(m){
     h += '<tr>';
     h += '<td><strong>'+(m['ID Meta']||'-')+'</strong></td>';
@@ -620,7 +633,7 @@ function renderPastas() {
     rowsC.forEach(function(r) {
       var st = r['Status'] || 'Pendente';
       var lk = r['Link da Pasta Drive'] || '';
-      html += '<div class="pcard st' + st.charAt(0) + '">';
+      html += '<div class="pcard ' + statusCardCls(st) + '">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">';
       html += '<div class="pcard-os">' + (r['Codigo Atividade']||'-') + '</div>';
       html += '<span class="badge ' + bcl(st) + '" style="font-size:9px;padding:2px 7px">' + st + '</span>';
@@ -645,7 +658,7 @@ function renderPastas() {
     agrupadas.forEach(function(r) {
       var st = r['Status'] || 'Pendente';
       var lk = r['Link da Pasta Drive'] || '';
-      html += '<div class="pcard st' + st.charAt(0) + '">';
+      html += '<div class="pcard ' + statusCardCls(st) + '">';
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:4px">';
       html += '<div class="pcard-os">' + (r['Codigo Atividade']||'-') + '</div>';
       html += '<span class="badge ' + bcl(st) + '" style="font-size:9px;padding:2px 7px">' + st + '</span>';
