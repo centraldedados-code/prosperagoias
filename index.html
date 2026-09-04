@@ -1,802 +1,967 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prospera GO | Sistema de Monitoramento de Prestação de Contas — SMPC</title>
+/**
+ * Code.gs
+ * PROSPERA GO — BACKEND API DO INDEX GITHUB — SMPC V3.0
+ * Instituto BR Arte
+ *
+ * Backend do Index hospedado no GitHub. Mantém compatibilidade com funções internas existentes.
+ *
+ * SEGURANÇA
+ * - autenticação por conta Google;
+ * - usa USUARIOS_SISTEMA quando houver usuários ativos cadastrados;
+ * - enquanto USUARIOS_SISTEMA estiver vazia, permite bootstrap apenas para
+ *   conta Google que consiga abrir o Drive raiz do projeto;
+ * - nenhuma senha é armazenada neste código;
+ * - CONFIG é exposta ao Index somente por whitelist institucional;
+ * - este Index é INTERNO e pode exibir links reais do Drive.
+ *
+ * DEPLOY RECOMENDADO
+ * - Web App
+ * - Executar como: usuário acessando o app
+ * - Quem tem acesso: qualquer pessoa com Conta Google
+ * A aplicação faz a segunda camada de autorização internamente.
+ */
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@400;600;700&display=swap');
+var IDX_GO = {
+  SS_ID: '1pJf-XWqy19o1L80osPHFUz7U7yR0Czi7zvjo9fYS21U',
+  ROOT_ID: '1PhTAPDo62WYbpxTJu_Sj3ITTLzZNEwx5',
+  TZ: 'America/Sao_Paulo',
 
-:root{
-  --az:#092040; --ci:#00B7D7; --am:#ECC203; --cz:#EFF1F3; --es:#021738; --br:#FFFFFF;
-  --gv:#1A6B3C; --gvb:#ebf7eb; --aw:#7A4F00; --awb:#fff8e0; --rd:#8B1A1A; --rdb:#fce8e8;
-  --bd:#dde4ee; --mut:#718096;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Open Sans',Arial,sans-serif;background:var(--cz);color:var(--es);min-height:100vh}
-h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
+  ABA_ATIVIDADES: 'ATIVIDADES_MESTRAS',
+  ABA_METAS: 'METAS',
+  ABA_PENDENCIAS: 'PENDENCIAS',
+  ABA_GOVERNANCA: 'GOVERNANCA',
+  ABA_ACESSOS: 'ACESSOS_SISTEMA',
+  ABA_USUARIOS: 'USUARIOS_SISTEMA',
+  ABA_LOG_ACESSO: 'LOG_ACESSO_SISTEMA',
+  ABA_LOG_AGENTE: 'LOG_AGENTE_V2',
 
-#pwd{position:fixed;inset:0;z-index:9999;background:var(--az);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
-#pwd.off{display:none}
-.pbox{background:var(--br);border-radius:16px;padding:36px 40px;max-width:430px;width:100%;text-align:center}
-.plogo-text{font:700 24px Montserrat;color:var(--az);letter-spacing:.4px;margin-bottom:6px}
-.plogo-sub{font:700 10px Montserrat;color:var(--ci);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:22px}
-.psub{color:var(--am);font-size:11px;font-weight:700;letter-spacing:1.3px;margin-bottom:8px;text-transform:uppercase;font-family:'Montserrat',sans-serif;line-height:1.45}
-.phint{font-size:12px;color:#8390a0;margin-bottom:20px}
-.pin{width:100%;padding:12px 16px;border:2px solid var(--bd);border-radius:10px;font-size:15px;letter-spacing:2px;color:var(--az);outline:none;margin-bottom:12px}
-.pin:focus{border-color:var(--ci)}
-.pbtn{width:100%;padding:13px;background:var(--az);color:var(--am);border:none;border-radius:10px;font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;font-family:'Montserrat',sans-serif}
-.pbtn:hover{background:var(--ci);color:var(--br)}
-.perr{color:#cc0000;font-size:12px;margin-top:8px;min-height:18px}
-.pfoot{margin-top:28px;color:rgba(255,255,255,.64);font:600 11px Montserrat;text-align:center;line-height:1.55}
+  PROJETO: 'Prospera GO',
+  INSTRUMENTO: 'Termo de Fomento nº 978676/2025',
+  FINANCIADOR: 'Ministério do Empreendedorismo, da Microempresa e da Empresa de Pequeno Porte',
+  TERRITORIO: 'Goiás',
+  VIGENCIA: '21/10/2025 a 21/10/2026',
+  INSTITUTO: 'Instituto BR Arte'
+};
 
-#ld{display:flex;position:fixed;inset:0;z-index:500;background:var(--cz);align-items:center;justify-content:center;flex-direction:column;gap:16px}
-#ld.off{display:none}
-.spin{width:48px;height:48px;border:4px solid var(--ci);border-top-color:var(--am);border-radius:50%;animation:giro .8s linear infinite}
-@keyframes giro{to{transform:rotate(360deg)}}
-.ltxt{font-family:'Montserrat',sans-serif;font-weight:700;color:var(--az);font-size:14px}
-#app{display:none}
-#app.on{display:block}
 
-.hdr{background:var(--az);position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.3)}
-.hdri{max-width:1220px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;min-height:68px;padding:8px 24px;gap:18px}
-.brandwrap{display:flex;align-items:center;gap:14px;min-width:0}
-.hbrand{background:var(--br);border-radius:8px;padding:7px 12px;min-width:150px;text-align:center}
-.hbrand-main{font:700 14px Montserrat;color:var(--az);letter-spacing:.4px}
-.hbrand-sub{font:700 8px Montserrat;color:var(--ci);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
-.hdiv{width:1px;height:34px;background:rgba(255,255,255,.2)}
-.htit{color:var(--am);font-size:15px;font-weight:700;letter-spacing:.5px;font-family:'Montserrat',sans-serif}
-.hsub{color:rgba(255,255,255,.62);font-size:10.5px;margin-top:2px}
-.huser{color:rgba(255,255,255,.64);font-size:9.5px;margin-top:2px}
-.hnav{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
-.nbtn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.65);font-size:10.2px;font-weight:700;letter-spacing:.4px;padding:8px 9px;border-radius:8px;text-transform:uppercase;font-family:'Montserrat',sans-serif}
-.nbtn:hover{color:var(--br);background:rgba(255,255,255,.1)}
-.nbtn.on{color:var(--am);background:rgba(236,194,3,.15)}
+/* ==========================================================================
+   WEB APP
+   ========================================================================== */
 
-.wrap{max-width:1220px;margin:0 auto;padding:24px 16px}
-.vw{display:none}
-.vw.on{display:block}
-.st{font-size:11px;font-weight:700;color:var(--az);text-transform:uppercase;letter-spacing:1.4px;margin:22px 0 12px;padding-left:10px;border-left:4px solid var(--ci);font-family:'Montserrat',sans-serif}
-.card{background:var(--br);border:1.5px solid var(--bd);border-radius:12px;padding:16px 18px}
-.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-
-.kpi{background:var(--az);border-radius:12px;padding:18px;text-align:center}
-.knum{color:var(--am);font-size:26px;font-weight:700;font-family:'Montserrat',sans-serif}
-.klab{color:rgba(255,255,255,.68);font-size:11px;margin-top:4px}
-
-.sbw{background:#dde4ee;border-radius:999px;overflow:hidden}
-.sb{border-radius:999px;transition:width 1s ease;height:100%}
-.shi{background:var(--gv)} .smid{background:var(--ci)} .slow{background:#c9940a} .scrit{background:#cc2222}
-
-.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.35px;font-family:'Montserrat',sans-serif}
-.bR{background:var(--gvb);color:var(--gv)}
-.bP{background:var(--awb);color:var(--aw)}
-.bC{background:var(--rdb);color:var(--rd)}
-.bA{background:#e8f0f8;color:var(--az)}
-.bE{background:#fff8e0;color:#7A4F00}
-.bN{background:#edf2f7;color:#5b6572}
-.bAnd{background:#e0f7fb;color:#176377}
-.bInst{background:#e8f0f8;color:#092040}
-
-.tblwrap{background:#fff;border:1.5px solid var(--bd);border-radius:12px;overflow:auto}
-.tbl{width:100%;border-collapse:collapse;font-size:12px}
-.tbl th{background:var(--az);color:var(--br);padding:10px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.45px;font-weight:700;font-family:'Montserrat',sans-serif;white-space:nowrap}
-.tbl td{padding:10px 12px;border-bottom:1px solid #eee;vertical-align:middle}
-.tbl tr:hover td{background:#f8fafc}
-
-.ficha-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px 26px}
-.ficha-rot{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8592A3;margin-bottom:4px}
-.ficha-val{font-family:'Montserrat',sans-serif;font-weight:600;font-size:14px;color:var(--az);overflow-wrap:anywhere}
-
-.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
-.fbtn{background:#fff;border:1.5px solid var(--bd);color:var(--az);font-size:10px;font-weight:700;padding:7px 13px;border-radius:20px;cursor:pointer;text-transform:uppercase;font-family:'Montserrat',sans-serif}
-.fbtn.on,.fbtn:hover{background:var(--az);color:var(--am);border-color:var(--az)}
-.search{flex:1;min-width:220px;padding:9px 12px;border:1.5px solid var(--bd);border-radius:9px;font:12px 'Open Sans',sans-serif;outline:none;background:#fff}
-.search:focus{border-color:var(--ci)}
-
-.notice{background:#e0f7fb;border:1px solid #b8ecf5;border-radius:10px;padding:13px 16px;font-size:12px;color:#176377;line-height:1.55}
-.warnbox{background:#fffaf0;border:1px solid #f0dfaa;border-left:5px solid var(--am);border-radius:10px;padding:13px 16px;font-size:11px;color:#6f5b15;line-height:1.5}
-.critbox{background:#fff;border:1px solid #f0caca;border-left:5px solid var(--rd);border-radius:10px;padding:13px 16px;font-size:11px;color:#7a2c2c;line-height:1.5}
-
-.diag-top{display:grid;grid-template-columns:1.2fr repeat(3,1fr);gap:12px}
-.diag-main{background:linear-gradient(135deg,#092040 0%,#0d3768 100%);border-radius:12px;padding:18px 20px;color:#fff}
-.diag-main .n{font:700 34px Montserrat;color:var(--am)}
-.diag-main .t{font:700 12px Montserrat;margin-top:2px}
-.diag-main .s{font-size:10.5px;color:rgba(255,255,255,.68);margin-top:6px;line-height:1.45}
-.diag-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:16px 18px}
-.diag-card .n{font:700 22px Montserrat;color:var(--ci)}
-.diag-card .t{font:700 10.5px Montserrat;color:var(--az);margin-top:3px;text-transform:uppercase;letter-spacing:.35px}
-.diag-card .s{font-size:10.5px;color:#718096;margin-top:6px;line-height:1.45}
-.diag-link{display:inline-flex;margin-top:10px;background:var(--am);color:var(--az);text-decoration:none;font:700 10px Montserrat;padding:8px 11px;border-radius:8px;text-transform:uppercase;letter-spacing:.3px}
-.diag-link.secondary{background:var(--az);color:var(--am)}
-.diag-disabled{display:inline-flex;margin-top:10px;background:#edf2f7;color:#7c8793;font:700 9.5px Montserrat;padding:8px 11px;border-radius:8px;text-transform:uppercase}
-
-.activity-card{background:#fff;border:1.5px solid var(--bd);border-left:4px solid var(--ci);border-radius:11px;padding:14px;display:flex;flex-direction:column;min-height:220px}
-.activity-title{font:700 12px Montserrat;color:var(--az);line-height:1.4;margin:8px 0 4px}
-.activity-meta{font-size:10.5px;color:#718096;line-height:1.5}
-.activity-rule{font-size:10px;color:#657180;line-height:1.5;margin-top:8px}
-.activity-open{display:block;text-align:center;text-decoration:none;background:var(--az);color:var(--am);border-radius:8px;padding:8px 9px;font:700 9.5px Montserrat;text-transform:uppercase;letter-spacing:.3px;margin-top:auto}
-
-.evid-hero{background:linear-gradient(135deg,#092040 0%,#0c315f 100%);border-radius:14px;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;color:#fff;box-shadow:0 8px 24px rgba(9,32,64,.14)}
-.evid-hero-title{font:700 18px Montserrat;color:var(--am);letter-spacing:.7px}
-.evid-hero-sub{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:5px;line-height:1.5}
-.evid-hero-badge{background:var(--am);color:var(--az);font:700 10px Montserrat;padding:7px 12px;border-radius:999px;white-space:nowrap}
-.evid-kpis{margin-top:12px}
-.evid-kpi{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:15px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.evid-kpi .num{font:700 25px Montserrat;color:var(--ci)}
-.evid-kpi .lab{font-size:10.5px;color:#6b7480;line-height:1.35;text-align:right}
-.drive-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.drive-card{border:1px solid #e0e6ee;border-left:4px solid var(--ci);border-radius:11px;padding:13px;background:#fbfcfd;display:flex;flex-direction:column;min-height:235px}
-.drive-card.has{border-left-color:var(--am);background:linear-gradient(180deg,#fffdf3 0%,#fff 100%)}
-.drive-card.alert{border-left-color:var(--rd)}
-.drive-card-title{font:700 11px Montserrat;color:var(--az);line-height:1.45;margin-bottom:7px}
-.drive-card-meta{font-size:10px;color:#737d88;line-height:1.5;margin-bottom:9px}
-.drive-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.evchip{font:700 9px Montserrat;border-radius:999px;padding:4px 7px;background:#edf2f7;color:#53606f}
-.evchip.photo{background:#fff5bf;color:#765d00}
-.evchip.doc{background:#e0f7fb;color:#176377}
-.evchip.bad{background:#fce8e8;color:#8B1A1A}
-.drive-open{display:block;text-align:center;text-decoration:none;background:var(--az);color:var(--am);border-radius:8px;padding:8px 9px;font:700 9.5px Montserrat;text-transform:uppercase;letter-spacing:.3px;margin-top:auto}
-.drive-open:hover{filter:brightness(1.08)}
-
-.folder-block{margin-bottom:18px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;overflow:hidden}
-.folder-head{background:var(--az);color:#fff;padding:12px 16px;font:700 12px Montserrat;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.folder-head span{color:var(--am);font-size:10px}
-.folder-body{padding:14px}
-.folder-row{border:1px solid #e2e7ed;border-radius:9px;padding:11px;background:#fbfcfd;margin-bottom:8px}
-.folder-row:last-child{margin-bottom:0}
-.folder-row h4{font-size:10.5px;color:var(--az);margin-bottom:7px;line-height:1.4}
-.evline{font-size:9.5px;color:#68717d;line-height:1.55}
-.evline strong{color:var(--az)}
-
-.alert-card{background:#fff;border:1.5px solid var(--bd);border-left:5px solid var(--am);border-radius:11px;padding:14px}
-.alert-card.crit{border-left-color:var(--rd)}
-.alert-title{font:700 11px Montserrat;color:var(--az);margin:7px 0 5px}
-.alert-meta{font-size:10px;color:#6f7884;line-height:1.5}
-
-.gov{padding:0;overflow:hidden}
-.govhead{background:var(--az);color:#fff;padding:12px 15px;display:flex;justify-content:space-between;gap:12px;align-items:center}
-.govhead strong{font:700 12px Montserrat}
-.govbody{padding:12px 15px}
-.doc{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #eee}
-.doc:last-child{border-bottom:0}
-.docname{font-size:11px;font-weight:600}
-.small{font-size:10px;color:var(--mut);line-height:1.45}
-.empty{color:#9aa4ad;font-size:11px;padding:10px 0}
-
-.foot{background:var(--az);border-radius:12px;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;margin-top:32px;flex-wrap:wrap;gap:10px}
-.ftxt{color:rgba(255,255,255,.5);font-size:11px}
-.fbadge{background:var(--am);color:var(--az);font-size:10.5px;font-weight:700;padding:5px 12px;border-radius:20px;font-family:'Montserrat',sans-serif}
-
-@media(max-width:1050px){.hnav{display:none}}
-@media(max-width:950px){.g4,.g3,.drive-grid,.diag-top{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.g4,.g3,.g2,.drive-grid,.diag-top{grid-template-columns:1fr}.hdri{padding:8px 14px}.hbrand{min-width:115px}.hsub,.huser{display:none}.wrap{padding:18px 12px}.evid-hero{align-items:flex-start}.evid-hero-badge{display:none}}
-</style>
-</head>
-
-<body>
-<section id="pwd">
-  <div class="pbox">
-    <div class="plogo-text">PROSPERA GO</div>
-    <div class="plogo-sub">Instituto BR Arte</div>
-    <div class="psub">Sistema de Monitoramento de Prestação de Contas — SMPC</div>
-    <div class="phint">Acesso ao Index interno do projeto</div>
-    <input class="pin" type="password" id="pf" placeholder="Senha de acesso" onkeydown="if(event.key==='Enter')chkPwd()">
-    <button class="pbtn" onclick="chkPwd()">ACESSAR SISTEMA</button>
-    <div class="perr" id="perr"></div>
-  </div>
-  <div class="pfoot">Prospera Goiás • Instituto BR Arte<br>Monitoramento, conformidade, evidências e rastreabilidade</div>
-</section>
-
-<div id="ld">
-  <div class="spin"></div>
-  <div class="ltxt">Carregando dados do projeto...</div>
-</div>
-
-<div id="app">
-<header class="hdr">
-  <div class="hdri">
-    <div class="brandwrap">
-      <div class="hbrand">
-        <div class="hbrand-main">PROSPERA GO</div>
-        <div class="hbrand-sub">Instituto BR Arte</div>
-      </div>
-      <div class="hdiv"></div>
-      <div>
-        <div class="htit">PROSPERA GO</div>
-        <div class="hsub">Sistema de Monitoramento de Prestação de Contas — SMPC</div>
-        <div class="huser" id="userbox"></div>
-      </div>
-    </div>
-    <nav class="hnav">
-      <button class="nbtn on" onclick="goV('dashboard',this)">Dashboard</button>
-      <button class="nbtn" onclick="goV('atividades',this)">Atividades</button>
-      <button class="nbtn" onclick="goV('evidenciasdrive',this)">Evidências Drive</button>
-      <button class="nbtn" onclick="goV('estrutura',this)">Estrutura</button>
-      <button class="nbtn" onclick="goV('metas',this)">Metas</button>
-      <button class="nbtn" onclick="goV('pendencias',this)">Pendências</button>
-      <button class="nbtn" onclick="goV('governanca',this)">Governança</button>
-      <button class="nbtn" onclick="goV('acessos',this)">Acessos</button>
-    </nav>
-  </div>
-</header>
-
-<main class="wrap">
-  <section class="vw on" id="vw-dashboard">
-    <div class="st">Ficha do Projeto</div>
-    <div class="card" id="ficha-card"></div>
-
-    <div class="st">Produção, Atendimento e Fomento</div>
-    <div class="diag-top" id="producao-top"></div>
-
-    <div class="st">Pendências Documentais Prioritárias</div>
-    <div id="alertas-documentais"></div>
-
-    <div class="st">Visão Geral</div>
-    <div class="g4" id="kpi-row"></div>
-
-    <div class="st">Índice Global de Execução</div>
-    <div class="card" style="padding:22px 26px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap">
-        <div>
-          <div style="font:700 14px Montserrat;color:var(--az)">Execução física acompanhada pelo SMPC</div>
-          <div style="font-size:11px;color:#7b8490;margin-top:4px">Média normalizada do progresso das atividades físicas monitoradas. Não mistura unidades diretamente.</div>
-        </div>
-        <div id="sc-txt" style="font:700 42px Montserrat;color:var(--ci)">--</div>
-      </div>
-      <div class="sbw" style="height:20px"><div class="sb" id="bar-g" style="width:0%"></div></div>
-    </div>
-
-    <div class="st">Cobertura de Evidências</div>
-    <div class="card" style="padding:18px 22px">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-        <div>
-          <div style="font:700 13px Montserrat;color:var(--az)">Atividades que já possuem algum registro de execução</div>
-          <div style="font-size:11px;color:#7b8490;margin-top:3px">Inclui evidências em unidades oficiais e arquivos preservados para classificação.</div>
-        </div>
-        <div id="ev-txt" style="font:700 30px Montserrat;color:var(--ci)">--</div>
-      </div>
-      <div class="sbw" style="height:14px"><div class="sb smid" id="bar-ev" style="width:0%"></div></div>
-    </div>
-
-    <div class="st">Drive Oficial do Projeto</div>
-    <div class="notice">
-      A estrutura operacional abaixo é somente leitura. O Index não move, renomeia, exclui nem duplica arquivos.
-      <div style="margin-top:10px"><a class="diag-link secondary" href="https://drive.google.com/drive/folders/1PhTAPDo62WYbpxTJu_Sj3ITTLzZNEwx5" target="_blank" rel="noopener">Abrir Drive Raiz</a></div>
-    </div>
-  </section>
-
-  <section class="vw" id="vw-atividades">
-    <div class="st">Acompanhamento das Atividades</div>
-    <div class="filters">
-      <button class="fbtn on" data-af="TODAS" onclick="setFiltroAtividades('TODAS',this)">Todas</button>
-      <button class="fbtn" data-af="COM_EVIDENCIA" onclick="setFiltroAtividades('COM_EVIDENCIA',this)">Com evidência</button>
-      <button class="fbtn" data-af="SEM_EVIDENCIA" onclick="setFiltroAtividades('SEM_EVIDENCIA',this)">Sem evidência</button>
-      <button class="fbtn" data-af="COM_ALERTA" onclick="setFiltroAtividades('COM_ALERTA',this)">Com alerta</button>
-      <input id="busca-ativ" class="search" placeholder="Buscar atividade, código, meta ou modalidade..." oninput="renderAtividades()">
-    </div>
-    <div class="g3" id="atividades-content"></div>
-  </section>
-
-  <section class="vw" id="vw-evidenciasdrive">
-    <div class="st">Explorador de Evidências no Google Drive</div>
-    <div class="evid-hero">
-      <div>
-        <div class="evid-hero-title">TRILHA DE EVIDÊNCIAS</div>
-        <div class="evid-hero-sub">Visão do que existe, do que está vazio e do que ainda precisa ser classificado no Drive oficial.</div>
-      </div>
-      <div class="evid-hero-badge">SMPC · DRIVE</div>
-    </div>
-
-    <div class="g4 evid-kpis" id="drive-kpis"></div>
-
-    <div class="st">Filtros de Evidência</div>
-    <div class="filters">
-      <button class="fbtn on" data-evf="TODAS" onclick="setFiltroEvidencias('TODAS',this)">Todas</button>
-      <button class="fbtn" data-evf="COM_EVIDENCIA" onclick="setFiltroEvidencias('COM_EVIDENCIA',this)">Com evidência</button>
-      <button class="fbtn" data-evf="SEM_EVIDENCIA" onclick="setFiltroEvidencias('SEM_EVIDENCIA',this)">Sem evidência</button>
-      <button class="fbtn" data-evf="COM_ALERTA" onclick="setFiltroEvidencias('COM_ALERTA',this)">Com alerta</button>
-      <input id="ev-busca" class="search" placeholder="Buscar atividade, código ou categoria..." oninput="renderEvidenciasDrive()">
-    </div>
-
-    <div class="notice" style="margin-bottom:14px">
-      <strong>ABRIR EVIDÊNCIAS</strong> leva diretamente à pasta oficial da atividade. O acesso aos arquivos continua sujeito às permissões do Google Drive.
-    </div>
-    <div class="drive-grid" id="drive-evidencias-content"></div>
-  </section>
-
-  <section class="vw" id="vw-estrutura">
-    <div class="st">Estrutura do Drive e das Evidências</div>
-    <div class="notice" style="margin-bottom:14px">Estrutura oficial do Prospera GO após a migração para o padrão SMPC, com atalhos controlados para as pastas monitoradas.</div>
-    <div id="estrutura-content"></div>
-  </section>
-
-  <section class="vw" id="vw-metas">
-    <div class="st">Metas e Indicadores</div>
-    <div class="tblwrap"><table class="tbl" id="tbl-metas"></table></div>
-  </section>
-
-  <section class="vw" id="vw-pendencias">
-    <div class="st">Pendências Internas do Projeto</div>
-    <div class="filters" id="f-pend"></div>
-    <div class="tblwrap"><table class="tbl" id="tbl-pend"></table></div>
-  </section>
-
-  <section class="vw" id="vw-governanca">
-    <div class="st">Governança e Documentos Oficiais</div>
-    <div class="g2" id="gov-grid"></div>
-  </section>
-
-  <section class="vw" id="vw-acessos">
-    <div class="st">Acessos Operacionais do Sistema</div>
-    <div class="tblwrap"><table class="tbl" id="tbl-acessos"></table></div>
-  </section>
-
-  <div class="foot">
-    <div class="ftxt">Prospera GO — Instituto BR Arte<br><span id="ultimaAtualizacaoPainel">Atualização automática ativa</span></div>
-    <div class="fbadge">Sistema de Monitoramento de Prestação de Contas — SMPC</div>
-  </div>
-</main>
-</div>
-
-<script>
-var D = null;
-var FILTRO_ATIVIDADES = 'TODAS';
-var FILTRO_EVIDENCIAS = 'TODAS';
-var SENHA = "Brarte@2026";
-
-function esc(v){
-  return String(v==null?'':v)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-}
-
-function norm(v){
-  return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-}
-
-function num(v){
-  var n=parseFloat(String(v==null?'0':v).replace(',','.'));
-  return isNaN(n)?0:n;
-}
-
-function pct(real,prev){
-  return prev>0 ? Math.min(100,Math.round((real/prev)*100)) : 0;
-}
-
-function scl(n){
-  if(n>=75) return 'shi';
-  if(n>=40) return 'smid';
-  if(n>=10) return 'slow';
-  return 'scrit';
-}
-
-function badgeClass(st){
-  var s=norm(st);
-  if(s==='completo'||s==='concluido'||s==='concluida'||s==='resolvida'||s==='ativo'||s==='ok') return 'bR';
-  if(s.indexOf('alerta')===0||s.indexOf('erro')===0||s==='critico'||s==='critica') return 'bC';
-  if(s.indexOf('pend')===0||s.indexOf('validar')!==-1||s==='atencao'||s.indexOf('risco')!==-1) return 'bP';
-  if(s.indexOf('andamento')!==-1) return 'bAnd';
-  if(s.indexOf('institucional')!==-1) return 'bInst';
-  return 'bN';
-}
-
-function campo(o,nomes){
-  if(!o) return '';
-  for(var i=0;i<nomes.length;i++){
-    if(Object.prototype.hasOwnProperty.call(o,nomes[i])) return o[nomes[i]];
+function doGet(e) {
+  if (e && e.parameter && e.parameter.action === 'api') {
+    try {
+      return ContentService
+        .createTextOutput(JSON.stringify(getDadosIndexGitHub_()))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          ok: false,
+          error: String(err && err.message ? err.message : err)
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   }
+
+  return HtmlService
+    .createHtmlOutput(
+      '<!doctype html><html><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>Prospera GO — API SMPC</title></head>' +
+      '<body style="font-family:Arial,sans-serif;padding:40px;background:#092040;color:#fff">' +
+      '<h2 style="color:#ECC203;margin:0 0 12px">Prospera GO — SMPC</h2>' +
+      '<p>API de dados do Index GitHub ativa.</p>' +
+      '<p style="color:#00B7D7;font-size:12px">Use <strong>?action=api</strong> para consultar o payload.</p>' +
+      '</body></html>'
+    )
+    .setTitle('Prospera GO — API de Dados');
+}
+
+
+/* ==========================================================================
+   PAYLOAD DO INDEX
+   ========================================================================== */
+
+function getDadosIndexInterno() {
+  var u = idxGoExigirAcesso_();
+
+  idxGoAtualizarUltimoAcesso_(u);
+
+  var atividades = idxGoLerTabela_(IDX_GO.ABA_ATIVIDADES);
+  var metas = idxGoLerTabela_(IDX_GO.ABA_METAS);
+  var pendencias = idxGoLerTabelaOpcional_(IDX_GO.ABA_PENDENCIAS);
+  var acessos = idxGoLerTabelaOpcional_(IDX_GO.ABA_ACESSOS);
+  var governanca = idxGoGovernanca_();
+  var documental = idxGoMontarMonitoramentoDocumental_(atividades);
+  var agente = idxGoUltimoAgente_();
+
+  return {
+    usuario: {
+      nome: u.nome || u.email,
+      email: u.email,
+      perfil: u.perfil || 'CONSULTA'
+    },
+
+    config: {
+      projeto: IDX_GO.PROJETO,
+      instrumento: IDX_GO.INSTRUMENTO,
+      financiador: IDX_GO.FINANCIADOR,
+      territorio: IDX_GO.TERRITORIO,
+      vigencia: IDX_GO.VIGENCIA,
+      instituto: IDX_GO.INSTITUTO
+    },
+
+    atividades: atividades,
+    metas: metas,
+    pendencias: pendencias,
+    governanca: governanca,
+    acessos: acessos,
+    documental: documental,
+    agente: agente,
+
+    atualizadoEm: Utilities.formatDate(
+      new Date(),
+      IDX_GO.TZ,
+      'dd/MM/yyyy HH:mm'
+    )
+  };
+}
+
+
+/**
+ * Payload leve para o Index hospedado no GitHub.
+ * Não depende de Session.getActiveUser() e não percorre recursivamente o Drive.
+ * Os links de pastas já presentes nas abas operacionais são mantidos para o
+ * explorador de evidências, no mesmo padrão funcional usado pelo Prospera Turismo.
+ */
+function getDadosIndexGitHub_() {
+  var atividades = idxGoLerTabela_(IDX_GO.ABA_ATIVIDADES);
+  var metas = idxGoLerTabela_(IDX_GO.ABA_METAS);
+  var pendencias = idxGoLerTabelaOpcional_(IDX_GO.ABA_PENDENCIAS);
+  var acessos = idxGoLerTabelaOpcional_(IDX_GO.ABA_ACESSOS);
+  var governanca = idxGoGovernancaGithub_();
+  var documental = idxGoMontarMonitoramentoDocumental_(atividades);
+  var agente = idxGoUltimoAgente_();
+
+  return {
+    ok: true,
+    usuario: {
+      nome: 'Prospera GO',
+      email: '',
+      perfil: 'SMPC / GESTÃO'
+    },
+    config: {
+      projeto: IDX_GO.PROJETO,
+      instrumento: IDX_GO.INSTRUMENTO,
+      financiador: IDX_GO.FINANCIADOR,
+      territorio: IDX_GO.TERRITORIO,
+      vigencia: IDX_GO.VIGENCIA,
+      instituto: IDX_GO.INSTITUTO
+    },
+    atividades: atividades,
+    metas: metas,
+    pendencias: pendencias,
+    governanca: governanca,
+    acessos: acessos,
+    documental: documental,
+    agente: agente,
+    atualizadoEm: Utilities.formatDate(new Date(), IDX_GO.TZ, 'dd/MM/yyyy HH:mm')
+  };
+}
+
+
+/**
+ * Governança leve para o GitHub: usa apenas a aba GOVERNANCA.
+ * NÃO varre subpastas/arquivos do Drive a cada abertura do painel.
+ */
+function idxGoGovernancaGithub_() {
+  var rows = idxGoLerTabelaOpcional_(IDX_GO.ABA_GOVERNANCA);
+
+  return rows.map(function(r) {
+    return {
+      recurso: r['Recurso'] || '',
+      pasta: r['Pasta'] || r['Recurso'] || '',
+      url: String(r['URL'] || '').trim(),
+      status: r['Status Operacional'] || '',
+      contagemCatalogada: Number(r['Arquivos Encontrados'] || 0),
+      ultimaVerificacao: r['Última Verificação'] || '',
+      observacao: r['Observação'] || '',
+      arquivos: []
+    };
+  });
+}
+
+
+/* ==========================================================================
+   AUTORIZAÇÃO INTERNA
+   ========================================================================== */
+
+function idxGoUsuarioAtual_(lancarErro) {
+  var email = String(
+    Session.getActiveUser().getEmail() || ''
+  ).trim().toLowerCase();
+
+  if (!email) {
+    if (lancarErro) {
+      throw new Error(
+        'Não foi possível identificar sua Conta Google. ' +
+        'Abra o Index autenticado em uma Conta Google autorizada.'
+      );
+    }
+    return null;
+  }
+
+  var ss = idxGoSs_();
+  var sh = ss.getSheetByName(IDX_GO.ABA_USUARIOS);
+
+  if (!sh) {
+    if (lancarErro) {
+      throw new Error('Aba USUARIOS_SISTEMA não encontrada.');
+    }
+    return null;
+  }
+
+  var dados = sh.getDataRange().getValues();
+  var ativosCadastrados = 0;
+  var encontrado = null;
+
+  if (dados.length >= 2) {
+    var head = dados[0].map(function(v) {
+      return String(v || '').trim();
+    });
+
+    var iNome = head.indexOf('Nome');
+    var iEmail = head.indexOf('E-mail');
+    var iPerfil = head.indexOf('Perfil');
+    var iAtivo = head.indexOf('Ativo');
+
+    for (var i = 1; i < dados.length; i++) {
+      var ativo = idxGoAtivo_(dados[i][iAtivo]);
+
+      if (ativo) {
+        ativosCadastrados++;
+      }
+
+      var e = String(dados[i][iEmail] || '')
+        .trim()
+        .toLowerCase();
+
+      if (ativo && e === email) {
+        encontrado = {
+          nome: iNome >= 0 ? String(dados[i][iNome] || '').trim() : '',
+          email: email,
+          perfil: iPerfil >= 0 ? String(dados[i][iPerfil] || '').trim() : 'CONSULTA',
+          linha: i + 1,
+          bootstrap: false
+        };
+        break;
+      }
+    }
+  }
+
+  // Quando já existe governança de usuários ativa, ela prevalece.
+  if (ativosCadastrados > 0) {
+    if (encontrado) return encontrado;
+
+    idxGoRegistrarAcesso_(false, email, 'Conta não autorizada em USUARIOS_SISTEMA.');
+
+    if (lancarErro) {
+      throw new Error(
+        'Sua Conta Google não está autorizada em USUARIOS_SISTEMA.'
+      );
+    }
+
+    return null;
+  }
+
+  // BOOTSTRAP:
+  // enquanto não houver usuário ativo cadastrado, só entra quem já possui
+  // acesso real ao Drive raiz. Nenhuma senha é usada.
+  try {
+    var raiz = DriveApp.getFolderById(IDX_GO.ROOT_ID);
+    raiz.getName();
+
+    return {
+      nome: email.split('@')[0],
+      email: email,
+      perfil: 'ADMIN / BOOTSTRAP',
+      linha: null,
+      bootstrap: true
+    };
+
+  } catch (e) {
+    idxGoRegistrarAcesso_(false, email, 'Sem acesso ao Drive raiz no modo bootstrap.');
+
+    if (lancarErro) {
+      throw new Error(
+        'USUARIOS_SISTEMA ainda está vazia e sua conta não possui acesso ao Drive raiz.'
+      );
+    }
+
+    return null;
+  }
+}
+
+
+function idxGoExigirAcesso_() {
+  var u = idxGoUsuarioAtual_(true);
+
+  if (!u) {
+    throw new Error('Acesso não autorizado.');
+  }
+
+  return u;
+}
+
+
+function idxGoAtivo_(v) {
+  var s = idxGoNormalizar_(v);
+
+  return [
+    'sim', 's', 'true', '1', 'ativo', 'ativa', 'yes'
+  ].indexOf(s) !== -1;
+}
+
+
+function idxGoAtualizarUltimoAcesso_(u) {
+  try {
+    if (u.linha) {
+      var sh = idxGoAba_(IDX_GO.ABA_USUARIOS);
+      var head = sh.getRange(1, 1, 1, sh.getLastColumn())
+        .getValues()[0]
+        .map(function(v) {
+          return String(v || '').trim();
+        });
+
+      var iUlt = head.indexOf('Último Acesso');
+
+      if (iUlt >= 0) {
+        sh.getRange(u.linha, iUlt + 1).setValue(new Date());
+      }
+    }
+
+    idxGoRegistrarAcesso_(
+      true,
+      u.email,
+      u.bootstrap
+        ? 'Acesso autorizado em modo bootstrap pelo Drive raiz.'
+        : 'Acesso autorizado por USUARIOS_SISTEMA.'
+    );
+
+  } catch (e) {
+    Logger.log('idxGoAtualizarUltimoAcesso_: ' + e.message);
+  }
+}
+
+
+function idxGoRegistrarAcesso_(ok, email, detalhe) {
+  try {
+    var sh = idxGoSs_().getSheetByName(IDX_GO.ABA_LOG_ACESSO);
+
+    if (!sh) return;
+
+    sh.appendRow([
+      Utilities.formatDate(new Date(), IDX_GO.TZ, 'dd/MM/yyyy HH:mm:ss'),
+      email || '',
+      ok ? 'AUTORIZADO' : 'NEGADO',
+      detalhe || ''
+    ]);
+
+  } catch (e) {
+    Logger.log('idxGoRegistrarAcesso_: ' + e.message);
+  }
+}
+
+
+function idxGoPaginaSemAcesso_() {
+  var email =
+    Session.getActiveUser().getEmail() ||
+    '(conta não identificada)';
+
+  var html =
+    '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<style>' +
+    'body{font-family:Arial,sans-serif;background:#EFF1F3;color:#092040;' +
+    'display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px}' +
+    '.box{background:#fff;border-radius:16px;padding:38px;max-width:520px;' +
+    'box-shadow:0 12px 30px rgba(9,32,64,.12);border-top:5px solid #00B7D7}' +
+    'h1{font-size:21px;margin:0 0 12px}.mail{color:#008ba7;font-weight:bold}' +
+    'p{line-height:1.55;color:#445160;font-size:14px}' +
+    '</style></head><body><div class="box">' +
+    '<h1>Acesso restrito — Prospera GO</h1>' +
+    '<p>Este é o Index Interno do Sistema de Monitoramento de Prestação de Contas — SMPC.</p>' +
+    '<p>Conta identificada: <span class="mail">' +
+    idxGoEscHtml_(email) +
+    '</span></p>' +
+    '<p>Solicite inclusão em <b>USUARIOS_SISTEMA</b> ou confirme que a conta possui acesso ao Drive raiz durante a implantação inicial.</p>' +
+    '</div></body></html>';
+
+  return HtmlService
+    .createHtmlOutput(html)
+    .setTitle('Acesso restrito — Prospera GO — SMPC');
+}
+
+
+/* ==========================================================================
+   LEITURA DA PLANILHA
+   ========================================================================== */
+
+function idxGoSs_() {
+  return SpreadsheetApp.openById(IDX_GO.SS_ID);
+}
+
+
+function idxGoAba_(nome) {
+  var sh = idxGoSs_().getSheetByName(nome);
+
+  if (!sh) {
+    throw new Error('Aba não encontrada: ' + nome);
+  }
+
+  return sh;
+}
+
+
+function idxGoLerTabela_(aba) {
+  return idxGoTabelaParaObjetos_(idxGoAba_(aba));
+}
+
+
+function idxGoLerTabelaOpcional_(aba) {
+  var sh = idxGoSs_().getSheetByName(aba);
+
+  return sh ? idxGoTabelaParaObjetos_(sh) : [];
+}
+
+
+function idxGoTabelaParaObjetos_(sh) {
+  var d = sh.getDataRange().getValues();
+
+  if (d.length < 2) return [];
+
+  var head = d[0].map(function(v) {
+    return String(v || '').trim();
+  });
+
+  var out = [];
+
+  for (var r = 1; r < d.length; r++) {
+    var vazia = true;
+
+    for (var c = 0; c < d[r].length; c++) {
+      if (
+        d[r][c] !== '' &&
+        d[r][c] !== null &&
+        d[r][c] !== undefined
+      ) {
+        vazia = false;
+        break;
+      }
+    }
+
+    if (vazia) continue;
+
+    var obj = {};
+
+    head.forEach(function(h, i) {
+      var v = d[r][i];
+
+      if (v instanceof Date) {
+        v = Utilities.formatDate(
+          v,
+          IDX_GO.TZ,
+          'dd/MM/yyyy HH:mm'
+        );
+      }
+
+      obj[h] =
+        v === null || v === undefined
+          ? ''
+          : String(v);
+    });
+
+    out.push(obj);
+  }
+
+  return out;
+}
+
+
+/* ==========================================================================
+   SAÚDE DO AGENTE
+   ========================================================================== */
+
+function idxGoUltimoAgente_() {
+  var sh = idxGoSs_().getSheetByName(IDX_GO.ABA_LOG_AGENTE);
+
+  if (!sh || sh.getLastRow() < 2) {
+    return {
+      saude: 'SEM DADO',
+      versao: '',
+      ultimaVerificacao: '',
+      erros: null,
+      duracao: ''
+    };
+  }
+
+  var d = sh.getRange(
+    1,
+    1,
+    Math.min(sh.getLastRow(), 5),
+    Math.max(sh.getLastColumn(), 6)
+  ).getDisplayValues();
+
+  var head = d[0].map(function(v) {
+    return String(v || '').trim();
+  });
+
+  var row = d[1];
+
+  function val(nome) {
+    var i = head.indexOf(nome);
+    return i >= 0 ? String(row[i] || '') : '';
+  }
+
+  var erros = Number(val('Erros') || 0);
+
+  return {
+    saude: erros === 0 ? 'ONLINE' : 'ALERTA',
+    versao: val('Versão'),
+    ultimaVerificacao: val('Data / Hora'),
+    erros: erros,
+    duracao: val('Duração'),
+    resumo: val('Resumo')
+  };
+}
+
+
+/* ==========================================================================
+   GOVERNANÇA
+   ========================================================================== */
+
+function idxGoGovernanca_() {
+  var rows = idxGoLerTabelaOpcional_(IDX_GO.ABA_GOVERNANCA);
+  var out = [];
+
+  rows.forEach(function(r) {
+    var url = String(r['URL'] || '').trim();
+    var id = idxGoExtrairIdDrive_(url);
+
+    var item = {
+      recurso: r['Recurso'] || '',
+      pasta: r['Pasta'] || r['Recurso'] || '',
+      url: url,
+      status: r['Status Operacional'] || '',
+      contagemCatalogada: Number(r['Arquivos Encontrados'] || 0),
+      ultimaVerificacao: r['Última Verificação'] || '',
+      observacao: r['Observação'] || '',
+      arquivos: []
+    };
+
+    if (id) {
+      try {
+        item.arquivos = idxGoListarArquivosGovernanca_(
+          DriveApp.getFolderById(id),
+          '',
+          2,
+          60
+        );
+      } catch (e) {
+        item.erroLeitura = e.message;
+      }
+    }
+
+    out.push(item);
+  });
+
+  return out;
+}
+
+
+function idxGoListarArquivosGovernanca_(
+  folder,
+  caminho,
+  profundidade,
+  limite
+) {
+  var out = [];
+  var files = folder.getFiles();
+
+  while (files.hasNext() && out.length < limite) {
+    var f = files.next();
+
+    out.push({
+      nome: f.getName(),
+      caminho: caminho || folder.getName(),
+      atualizado: Utilities.formatDate(
+        f.getLastUpdated(),
+        IDX_GO.TZ,
+        'dd/MM/yyyy HH:mm'
+      ),
+      url: f.getUrl()
+    });
+  }
+
+  if (profundidade <= 0 || out.length >= limite) {
+    return out;
+  }
+
+  var folders = folder.getFolders();
+
+  while (folders.hasNext() && out.length < limite) {
+    var sub = folders.next();
+    var novoCaminho =
+      caminho
+        ? caminho + ' / ' + sub.getName()
+        : sub.getName();
+
+    var filhos = idxGoListarArquivosGovernanca_(
+      sub,
+      novoCaminho,
+      profundidade - 1,
+      limite - out.length
+    );
+
+    out = out.concat(filhos);
+  }
+
+  return out;
+}
+
+
+/* ==========================================================================
+   MONITORAMENTO DOCUMENTAL
+   ========================================================================== */
+
+function idxGoMontarMonitoramentoDocumental_(atividades) {
+  var monitoramento = [];
+  var alertas = [];
+
+  var totalEvidencias = 0;
+  var atividadesComEvidencia = 0;
+  var evidenciasParaValidar = 0;
+
+  atividades.forEach(function(a) {
+    var m = idxGoDocumentoAtividade_(a);
+
+    monitoramento.push(m);
+
+    totalEvidencias += m.totalEvidencias;
+    evidenciasParaValidar += m.evidenciasForaPadrao || 0;
+
+    if (m.temEvidencia) {
+      atividadesComEvidencia++;
+    }
+
+    m.alertas.forEach(function(x) {
+      alertas.push(x);
+    });
+  });
+
+  var criticos = alertas.filter(function(a) {
+    return a.severidade === 'CRITICO';
+  }).length;
+
+  return {
+    regra:
+      'Atividade totalmente sem evidência permanece sem alerta de composição. ' +
+      'Quando qualquer evidência aparece, o Index verifica as categorias esperadas ' +
+      'e alerta lacunas. Execução física e cobertura documental são indicadores distintos.',
+
+    resumo: {
+      totalAtividades: atividades.length,
+      totalEvidencias: totalEvidencias,
+      atividadesComEvidencia: atividadesComEvidencia,
+      evidenciasParaValidar: evidenciasParaValidar,
+      totalAlertas: alertas.length,
+      alertasCriticos: criticos
+    },
+
+    monitoramento: monitoramento,
+    alertas: alertas
+  };
+}
+
+
+function idxGoDocumentoAtividade_(a) {
+  var codigo = String(a['Código Atividade'] || '').trim();
+  var nome = String(
+    a['Nome da Atividade'] ||
+    codigo
+  ).trim();
+
+  var obs = String(a['Observação'] || '');
+  var link = String(a['Link da Pasta Drive'] || '');
+  var realizada = Number(a['Quantidade Realizada'] || 0);
+
+  var oficial = idxGoExtrairNumero_(
+    obs,
+    /Total de evidências nas unidades oficiais:\s*(\d+)/i
+  );
+
+  if (oficial === null) {
+    oficial = idxGoExtrairNumero_(
+      obs,
+      /Total de arquivos localizados:\s*(\d+)/i
+    );
+  }
+
+  if (oficial === null) {
+    oficial = idxGoExtrairNumero_(
+      obs,
+      /Arquivos\/questionários localizados:\s*(\d+)/i
+    );
+  }
+
+  if (oficial === null) {
+    oficial = realizada;
+  }
+
+  var legado = idxGoExtrairNumero_(
+    obs,
+    /00_OFICINAS_PARA_VERIFICAR:\s*(\d+)\s*arquivo/i
+  ) || 0;
+
+  var listas = idxGoSomarRegex_(obs, /lista=(\d+)/gi);
+  var fotos = idxGoSomarRegex_(obs, /fotos=(\d+)/gi);
+  var unicas = idxGoSomarRegex_(obs, /únicasMD5=(\d+)/gi);
+  var duplicadas = idxGoExtrairNumero_(
+    obs,
+    /Possíveis duplicidades por MD5:\s*(\d+)/i
+  ) || 0;
+
+  var cats = [];
+
+  function cat(nomeCat, qtd, critica, minimo) {
+    cats.push({
+      nome: nomeCat,
+      quantidade: Number(qtd || 0),
+      critica: !!critica,
+      minimo: minimo || 1
+    });
+  }
+
+  if (codigo === 'GERENCIAMENTO') {
+    cat('Relatório de Atividade', realizada, true, 1);
+
+  } else if (codigo === 'COMUNICACAO') {
+    cat('Relatório de Atividade', realizada, true, 1);
+
+  } else if (codigo === 'MAPEAMENTO_EMPREENDIMENTOS') {
+    cat('Questionários aplicados', realizada, true, 1);
+
+  } else if (codigo === 'RELATORIO_EMPREENDIMENTOS') {
+    cat('Relatório de Perfil', realizada, true, 1);
+
+  } else if (
+    codigo === 'SEMINARIOS_FORMACAO' ||
+    codigo === 'OFICINAS_PRESENCIAIS' ||
+    codigo === 'OFICINAS_ONLINE' ||
+    codigo === 'PALESTRAS_COMUNITARIAS' ||
+    codigo === 'FEIRA_NEGOCIOS'
+  ) {
+    cat('Lista / registro de presença', listas, true, 1);
+    cat('Fotos / registros de imagem', fotos || unicas, false, 15);
+
+  } else if (codigo === 'DIAGNOSTICOS_NEGOCIOS') {
+    cat('Diagnóstico produzido', realizada, true, 1);
+
+  } else if (codigo === 'CONSULTORIAS_NEGOCIOS') {
+    cat('Relatório de consultoria', realizada, true, 1);
+
+  } else {
+    cat('Evidência principal', realizada, true, 1);
+  }
+
+  var total = Number(oficial || 0) + Number(legado || 0);
+  var tem = total > 0;
+  var alerts = [];
+
+  if (tem) {
+    cats.forEach(function(c) {
+      if (c.quantidade === 0) {
+        alerts.push({
+          severidade: c.critica ? 'CRITICO' : 'ATENCAO',
+          competencia: '',
+          codigo: codigo,
+          atividade: nome,
+          categoria: c.nome,
+          quantidade: 0,
+          mensagem:
+            'Há evidência associada à atividade, mas esta categoria monitorada está zerada.'
+        });
+
+      } else if (
+        c.minimo > 1 &&
+        c.quantidade < c.minimo
+      ) {
+        alerts.push({
+          severidade: 'ATENCAO',
+          competencia: '',
+          codigo: codigo,
+          atividade: nome,
+          categoria: c.nome,
+          quantidade: c.quantidade,
+          mensagem:
+            'Quantidade abaixo do critério operacional de ' +
+            c.minimo +
+            '.'
+        });
+      }
+    });
+
+    if (legado > 0) {
+      alerts.push({
+        severidade: 'CRITICO',
+        competencia: '',
+        codigo: codigo,
+        atividade: nome,
+        categoria: 'Classificação da ocorrência',
+        quantidade: legado,
+        mensagem:
+          legado +
+          ' arquivo(s) permanecem em 00_OFICINAS_PARA_VERIFICAR e não contam como oficina concluída.'
+      });
+    }
+
+    if (duplicadas > 0) {
+      alerts.push({
+        severidade: 'ATENCAO',
+        competencia: '',
+        codigo: codigo,
+        atividade: nome,
+        categoria: 'Possível duplicidade MD5',
+        quantidade: duplicadas,
+        mensagem:
+          duplicadas +
+          ' arquivo(s) apresentam hash MD5 repetido. Revisar antes de qualquer exclusão.'
+      });
+    }
+  }
+
+  var preenchidas = cats.filter(function(c) {
+    return c.quantidade > 0;
+  }).length;
+
+  var cobertura =
+    cats.length
+      ? Math.round((preenchidas / cats.length) * 100)
+      : 0;
+
+  return {
+    codigo: codigo,
+    atividade: nome,
+    competencia: '',
+    link: link,
+    totalEvidencias: total,
+    evidenciasOficiais: Number(oficial || 0),
+    evidenciasForaPadrao: Number(legado || 0),
+    temEvidencia: tem,
+    categorias: cats,
+    coberturaCategoriasPct: cobertura,
+    alertas: alerts,
+    erroLeitura: ''
+  };
+}
+
+
+function idxGoSomarRegex_(texto, regex) {
+  var soma = 0;
+  var m;
+
+  while ((m = regex.exec(String(texto || ''))) !== null) {
+    soma += Number(m[1] || 0);
+  }
+
+  return soma;
+}
+
+
+function idxGoExtrairNumero_(texto, regex) {
+  var m = String(texto || '').match(regex);
+
+  return m ? Number(m[1]) : null;
+}
+
+
+/* ==========================================================================
+   TESTE LOCAL
+   ========================================================================== */
+
+/**
+ * Execute apenas no projeto standalone do Index antes do deploy.
+ * Não altera dados operacionais; apenas monta o payload.
+ */
+function PGO_TESTAR_INDEX_INTERNO() {
+  var dados = getDadosIndexInterno();
+
+  Logger.log('====================================================');
+  Logger.log('PROSPERA GO — TESTE INDEX INTERNO');
+  Logger.log('====================================================');
+  Logger.log('Usuário: ' + dados.usuario.email);
+  Logger.log('Atividades: ' + dados.atividades.length);
+  Logger.log('Metas: ' + dados.metas.length);
+  Logger.log('Pendências: ' + dados.pendencias.length);
+  Logger.log('Governança: ' + dados.governanca.length);
+  Logger.log('Acessos: ' + dados.acessos.length);
+  Logger.log(
+    'Evidências: ' +
+    dados.documental.resumo.totalEvidencias
+  );
+  Logger.log(
+    'Alertas documentais: ' +
+    dados.documental.resumo.totalAlertas
+  );
+  Logger.log(
+    'Agente: ' +
+    dados.agente.saude +
+    ' / ' +
+    dados.agente.versao
+  );
+  Logger.log('✅ INDEX INTERNO — PAYLOAD GERADO COM SUCESSO.');
+  Logger.log('====================================================');
+}
+
+
+/* ==========================================================================
+   UTILITÁRIOS
+   ========================================================================== */
+
+function idxGoExtrairIdDrive_(url) {
+  var s = String(url || '').trim();
+
+  if (!s) return '';
+
+  var m = s.match(/\/folders\/([A-Za-z0-9_-]{10,})/);
+  if (m) return m[1];
+
+  m = s.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  if (m) return m[1];
+
+  if (/^[A-Za-z0-9_-]{20,}$/.test(s)) {
+    return s;
+  }
+
   return '';
 }
 
-function AT(){return D&&Array.isArray(D.atividades)?D.atividades:[];}
-function MON(){return D&&D.documental&&Array.isArray(D.documental.monitoramento)?D.documental.monitoramento:[];}
-function ALERTAS(){return D&&D.documental&&Array.isArray(D.documental.alertas)?D.documental.alertas:[];}
 
-function codAtiv(a){return String(campo(a,['Código Atividade','Codigo Atividade'])||'').trim();}
-function nomeAtiv(a){return String(campo(a,['Nome da Atividade','Atividade'])||codAtiv(a)||'-').trim();}
-function linkAtiv(a){return String(campo(a,['Link da Pasta Drive','Link da Pasta','URL'])||'').trim();}
-
-function findDocForActivity(a){
-  var code=codAtiv(a), link=linkAtiv(a), arr=MON();
-  for(var i=0;i<arr.length;i++){
-    if(link && String(arr[i].link||'')===link) return arr[i];
-    if(code && String(arr[i].codigo||'')===code) return arr[i];
-  }
-  return null;
+function idxGoNormalizar_(v) {
+  return String(v || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
-function ehComEvidencia(m){return !!(m&&num(m.totalEvidencias)>0);}
-function temAlerta(m){return !!(m&&Array.isArray(m.alertas)&&m.alertas.length);}
 
-function chkPwd(){
-  var v=document.getElementById('pf').value;
-  if(v===SENHA){
-    document.getElementById('pwd').classList.add('off');
-    sessionStorage.setItem('pgo_smpc_ok_v2','1');
-    carregarApp(false);
-    iniciarAtualizacaoAutomatica();
-  }else{
-    document.getElementById('perr').textContent='Senha incorreta. Verifique com a coordenação.';
-    document.getElementById('pf').value='';
-    document.getElementById('pf').focus();
-  }
+function idxGoEscHtml_(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
-
-function goV(v,btn){
-  document.querySelectorAll('.vw').forEach(function(e){e.classList.remove('on');});
-  document.querySelectorAll('.nbtn').forEach(function(e){e.classList.remove('on');});
-  var el=document.getElementById('vw-'+v);
-  if(el) el.classList.add('on');
-  if(btn) btn.classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function carregarApp(silencioso){
-  if(!silencioso){
-    document.getElementById('ld').classList.remove('off');
-  }
-
-  google.script.run
-    .withSuccessHandler(function(data){
-      D=data||{};
-      document.getElementById('ld').classList.add('off');
-      document.getElementById('app').classList.add('on');
-      renderAll();
-      var ua=document.getElementById('ultimaAtualizacaoPainel');
-      if(ua){
-        ua.textContent='Atualizado em '+(D.atualizadoEm||new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}));
-      }
-    })
-    .withFailureHandler(function(err){
-      if(silencioso){console.error('Atualização automática:',err);return;}
-      document.getElementById('ld').classList.remove('off');
-      document.getElementById('ld').innerHTML='<div class="card" style="max-width:560px;text-align:center;border-left:6px solid #8B1A1A">'+
-        '<div style="font:700 16px Montserrat;color:#8B1A1A;margin-bottom:8px">Falha ao carregar o Index</div>'+
-        '<div style="font-size:12px;color:#657180;line-height:1.55">'+esc(err&&err.message?err.message:err)+'</div></div>';
-    })
-    .getDadosIndexInterno();
-}
-
-function renderAll(){
-  renderUser();
-  renderFicha();
-  renderProducao();
-  renderAlertasDashboard();
-  renderDash();
-  renderAtividades();
-  renderEvidenciasDrive();
-  renderEstrutura();
-  renderMetas();
-  renderPendencias(D&&Array.isArray(D.pendencias)?D.pendencias:[]);
-  renderGovernanca(D&&Array.isArray(D.governanca)?D.governanca:[]);
-  renderAcessos(D&&Array.isArray(D.acessos)?D.acessos:[]);
-}
-
-function renderUser(){
-  var u=(D&&D.usuario)||{};
-  var el=document.getElementById('userbox');
-  if(el) el.textContent=(u.nome||u.email||'Usuário autorizado')+' · '+(u.perfil||'CONSULTA');
-}
-
-function renderFicha(){
-  var f=(D&&D.config)||{};
-  document.getElementById('ficha-card').innerHTML=
-    '<div class="ficha-grid">'+
-      '<div><div class="ficha-rot">Projeto</div><div class="ficha-val">'+esc(f.projeto||'Prospera GO')+'</div></div>'+
-      '<div><div class="ficha-rot">Instrumento</div><div class="ficha-val">'+esc(f.instrumento||'-')+'</div></div>'+
-      '<div><div class="ficha-rot">Órgão financiador</div><div class="ficha-val">'+esc(f.financiador||'-')+'</div></div>'+
-      '<div><div class="ficha-rot">Território</div><div class="ficha-val">'+esc(f.territorio||'Goiás')+'</div></div>'+
-      '<div><div class="ficha-rot">Vigência</div><div class="ficha-val">'+esc(f.vigencia||'-')+'</div></div>'+
-      '<div><div class="ficha-rot">Instituição</div><div class="ficha-val">'+esc(f.instituto||'Instituto BR Arte')+'</div></div>'+
-    '</div>';
-}
-
-function atividadePorCodigo(c){
-  return AT().find(function(a){return codAtiv(a)===c;})||null;
-}
-
-function acessoPorNome(nome){
-  var arr=D&&Array.isArray(D.acessos)?D.acessos:[];
-  var alvo=norm(nome);
-  for(var i=0;i<arr.length;i++){
-    if(norm(campo(arr[i],['RECURSO','Recurso'])).indexOf(alvo)!==-1) return arr[i];
-  }
-  return null;
-}
-
-function renderProducao(){
-  var diag=atividadePorCodigo('DIAGNOSTICOS_NEGOCIOS');
-  var con=atividadePorCodigo('CONSULTORIAS_NEGOCIOS');
-  var feira=atividadePorCodigo('FEIRA_NEGOCIOS');
-  var portal=acessoPorNome('Portal do Produtor');
-  var portalUrl=portal?String(campo(portal,['URL','Url'])||'').trim():'';
-  var portalStatus=portal?String(campo(portal,['STATUS','Status'])||'PENDENTE'):'PENDENTE';
-
-  function qtd(a,tipo){
-    if(!a) return '—';
-    return num(campo(a,[tipo]));
-  }
-
-  var h='<div class="diag-main">'+
-      '<div class="n">'+qtd(diag,'Quantidade Prevista')+'</div>'+
-      '<div class="t">Diagnósticos previstos</div>'+
-      '<div class="s">Realizados: <strong>'+qtd(diag,'Quantidade Realizada')+'</strong>. Monitoramento pela pasta oficial de diagnósticos.</div>'+
-      (diag&&linkAtiv(diag)?'<a class="diag-link" href="'+esc(linkAtiv(diag))+'" target="_blank" rel="noopener">Abrir diagnósticos</a>':'')+
-    '</div>'+
-    '<div class="diag-card"><div class="n">'+qtd(con,'Quantidade Prevista')+'</div><div class="t">Consultorias previstas</div><div class="s">Realizadas: <strong>'+qtd(con,'Quantidade Realizada')+'</strong>.</div>'+
-      (con&&linkAtiv(con)?'<a class="diag-link secondary" href="'+esc(linkAtiv(con))+'" target="_blank" rel="noopener">Abrir consultorias</a>':'')+'</div>'+
-    '<div class="diag-card"><div class="n">'+qtd(feira,'Quantidade Prevista')+'</div><div class="t">Feira de negócios</div><div class="s">Evidências localizadas: <strong>'+num(findDocForActivity(feira)&&findDocForActivity(feira).totalEvidencias)+'</strong>.</div>'+
-      (feira&&linkAtiv(feira)?'<a class="diag-link secondary" href="'+esc(linkAtiv(feira))+'" target="_blank" rel="noopener">Abrir feira</a>':'')+'</div>'+
-    '<div class="diag-card"><div class="n">SMPC</div><div class="t">Portal do Produtor</div><div class="s">Status atual: <strong>'+esc(portalStatus)+'</strong>.</div>'+
-      (portalUrl?'<a class="diag-link" href="'+esc(portalUrl)+'" target="_blank" rel="noopener">Abrir Portal do Produtor</a>':'<span class="diag-disabled">Ainda sem URL cadastrada</span>')+'</div>';
-  document.getElementById('producao-top').innerHTML=h;
-}
-
-function progressoGlobal(){
-  var rows=AT().filter(function(a){return num(campo(a,['Quantidade Prevista']))>0;});
-  if(!rows.length) return 0;
-  var soma=rows.reduce(function(acc,a){
-    return acc+pct(num(campo(a,['Quantidade Realizada'])),num(campo(a,['Quantidade Prevista'])));
-  },0);
-  return Math.round(soma/rows.length);
-}
-
-function renderDash(){
-  var at=AT();
-  var doc=(D&&D.documental&&D.documental.resumo)||{};
-  var pend=D&&Array.isArray(D.pendencias)?D.pendencias:[];
-  var abertas=pend.filter(function(p){
-    var s=norm(campo(p,['Status','STATUS']));
-    return s!=='resolvida'&&s!=='concluida'&&s!=='fechada';
-  }).length;
-  var ag=(D&&D.agente)||{};
-
-  document.getElementById('kpi-row').innerHTML=
-    '<div class="kpi"><div class="knum">'+at.length+'</div><div class="klab">Atividades monitoradas</div></div>'+
-    '<div class="kpi"><div class="knum">'+num(doc.totalEvidencias)+'</div><div class="klab">Evidências localizadas</div></div>'+
-    '<div class="kpi"><div class="knum">'+num(doc.evidenciasParaValidar)+'</div><div class="klab">Evidências para classificar</div></div>'+
-    '<div class="kpi"><div class="knum">'+abertas+'</div><div class="klab">Pendências internas abertas</div></div>'+
-    '<div class="kpi"><div class="knum">'+num(doc.totalAlertas)+'</div><div class="klab">Alertas documentais</div></div>'+
-    '<div class="kpi"><div class="knum">'+num(doc.alertasCriticos)+'</div><div class="klab">Alertas críticos</div></div>'+
-    '<div class="kpi"><div class="knum">'+esc(ag.saude||'SEM DADO')+'</div><div class="klab">Saúde do Agente</div></div>'+
-    '<div class="kpi"><div class="knum" style="font-size:15px">'+esc(ag.ultimaVerificacao||'—')+'</div><div class="klab">Última verificação</div></div>';
-
-  var sg=progressoGlobal();
-  document.getElementById('sc-txt').textContent=sg+'%';
-  var bg=document.getElementById('bar-g');
-  bg.style.width=sg+'%'; bg.className='sb '+scl(sg);
-
-  var total=num(doc.totalAtividades)||at.length;
-  var com=num(doc.atividadesComEvidencia);
-  var pe=total?Math.round((com/total)*100):0;
-  document.getElementById('ev-txt').textContent=com+' de '+total+' • '+pe+'%';
-  document.getElementById('bar-ev').style.width=pe+'%';
-}
-
-function renderAlertasDashboard(){
-  var arr=ALERTAS();
-  var el=document.getElementById('alertas-documentais');
-  if(!arr.length){
-    el.innerHTML='<div class="notice">Nenhum alerta documental automático disparado no momento.</div>';
-    return;
-  }
-  el.innerHTML='<div class="g3">'+arr.slice(0,6).map(function(a){
-    var crit=String(a.severidade||'')==='CRITICO';
-    return '<div class="alert-card '+(crit?'crit':'')+'">'+
-      '<span class="badge '+(crit?'bC':'bP')+'">'+esc(a.severidade||'ATENÇÃO')+'</span>'+
-      '<div class="alert-title">'+esc(a.atividade||a.codigo||'-')+'</div>'+
-      '<div class="alert-meta"><strong>'+esc(a.categoria||'')+'</strong><br>'+esc(a.mensagem||'')+'</div>'+
-    '</div>';
-  }).join('')+'</div>';
-}
-
-function setFiltroAtividades(v,btn){
-  FILTRO_ATIVIDADES=v;
-  document.querySelectorAll('[data-af]').forEach(function(b){b.classList.remove('on');});
-  if(btn) btn.classList.add('on');
-  renderAtividades();
-}
-
-function atividadePassaFiltro(a){
-  var m=findDocForActivity(a);
-  if(FILTRO_ATIVIDADES==='COM_EVIDENCIA'&&!ehComEvidencia(m)) return false;
-  if(FILTRO_ATIVIDADES==='SEM_EVIDENCIA'&&ehComEvidencia(m)) return false;
-  if(FILTRO_ATIVIDADES==='COM_ALERTA'&&!temAlerta(m)) return false;
-  return true;
-}
-
-function activityCard(a){
-  var r=num(campo(a,['Quantidade Realizada']));
-  var p=num(campo(a,['Quantidade Prevista']));
-  var pc=pct(r,p);
-  var st=campo(a,['Status'])||'Pendente';
-  var m=findDocForActivity(a);
-  var evid=ehComEvidencia(m)?num(m.totalEvidencias):0;
-  var alerts=m&&Array.isArray(m.alertas)?m.alertas.length:0;
-  var link=linkAtiv(a);
-
-  return '<div class="activity-card">'+
-    '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><span class="badge '+badgeClass(st)+'">'+esc(st)+'</span><span class="badge '+(alerts?'bC':evid?'bR':'bN')+'">'+(alerts?alerts+' alerta(s)':evid+' evidência(s)')+'</span></div>'+
-    '<div class="activity-title">'+esc(nomeAtiv(a))+'</div>'+
-    '<div class="activity-meta">'+esc(codAtiv(a))+' • '+esc(campo(a,['Modalidade'])||'-')+(campo(a,['Meta'])?' • '+esc(campo(a,['Meta'])):'')+'</div>'+
-    '<div style="display:flex;justify-content:space-between;margin:12px 0 5px;font-size:11px"><b>'+r+' / '+p+'</b><span>'+pc+'%</span></div>'+
-    '<div class="sbw" style="height:8px"><div class="sb '+scl(pc)+'" style="width:'+pc+'%"></div></div>'+
-    '<div class="activity-rule">'+esc(campo(a,['Regra de Comprovação'])||'')+'</div>'+
-    (m&&num(m.evidenciasForaPadrao)>0?'<div class="warnbox" style="margin-top:9px">'+num(m.evidenciasForaPadrao)+' arquivo(s) preservado(s) para classificação e não contabilizado(s) como ocorrência concluída.</div>':'')+
-    (link?'<a class="activity-open" href="'+esc(link)+'" target="_blank" rel="noopener">Abrir pasta da atividade</a>':'')+
-  '</div>';
-}
-
-function renderAtividades(){
-  var busca=(document.getElementById('busca-ativ')?document.getElementById('busca-ativ').value:'').toLowerCase().trim();
-  var rows=AT().filter(function(a){
-    if(!atividadePassaFiltro(a)) return false;
-    if(!busca) return true;
-    var blob=(nomeAtiv(a)+' '+codAtiv(a)+' '+campo(a,['Modalidade'])+' '+campo(a,['Meta'])).toLowerCase();
-    return blob.indexOf(busca)!==-1;
-  });
-  document.getElementById('atividades-content').innerHTML=rows.length?rows.map(activityCard).join(''):'<div class="card">Nenhuma atividade encontrada para este filtro.</div>';
-}
-
-function setFiltroEvidencias(v,btn){
-  FILTRO_EVIDENCIAS=v;
-  document.querySelectorAll('[data-evf]').forEach(function(b){b.classList.remove('on');});
-  if(btn) btn.classList.add('on');
-  renderEvidenciasDrive();
-}
-
-function filtrarDriveRows(){
-  var busca=(document.getElementById('ev-busca')?document.getElementById('ev-busca').value:'').toLowerCase().trim();
-  return MON().filter(function(m){
-    if(FILTRO_EVIDENCIAS==='COM_EVIDENCIA'&&!ehComEvidencia(m)) return false;
-    if(FILTRO_EVIDENCIAS==='SEM_EVIDENCIA'&&ehComEvidencia(m)) return false;
-    if(FILTRO_EVIDENCIAS==='COM_ALERTA'&&!temAlerta(m)) return false;
-    if(busca){
-      var cats=(m.categorias||[]).map(function(c){return c.nome;}).join(' ');
-      var blob=((m.atividade||'')+' '+(m.codigo||'')+' '+cats).toLowerCase();
-      if(blob.indexOf(busca)===-1) return false;
-    }
-    return true;
-  });
-}
-
-function renderEvidenciasDrive(){
-  var rows=filtrarDriveRows();
-  var all=MON();
-  var totalEvid=all.reduce(function(a,m){return a+num(m.totalEvidencias);},0);
-  var com=all.filter(ehComEvidencia).length;
-  var sem=all.length-com;
-  var fora=all.reduce(function(a,m){return a+num(m.evidenciasForaPadrao);},0);
-  document.getElementById('drive-kpis').innerHTML=
-    '<div class="evid-kpi"><div class="num">'+totalEvid+'</div><div class="lab">evidência(s)<br>localizada(s)</div></div>'+
-    '<div class="evid-kpi"><div class="num">'+com+'</div><div class="lab">atividade(s)<br>com evidência</div></div>'+
-    '<div class="evid-kpi"><div class="num">'+sem+'</div><div class="lab">atividade(s)<br>sem evidência</div></div>'+
-    '<div class="evid-kpi"><div class="num">'+fora+'</div><div class="lab">arquivo(s)<br>para classificar</div></div>';
-
-  var el=document.getElementById('drive-evidencias-content');
-  if(!rows.length){el.innerHTML='<div class="card">Nenhum item encontrado para os filtros selecionados.</div>';return;}
-
-  el.innerHTML=rows.map(function(m){
-    var has=ehComEvidencia(m), alert=temAlerta(m);
-    var cats=(m.categorias||[]).map(function(c){
-      var q=num(c.quantidade), min=num(c.minimo)||1;
-      return '<span class="evchip '+(q===0&&c.critica?'bad':q>0?'doc':'')+'">'+esc(c.nome)+': '+q+(min>1?' / mín. '+min:'')+'</span>';
-    }).join('');
-    return '<div class="drive-card '+(has?'has ':'')+(alert?'alert':'')+'">'+
-      '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div class="drive-card-title">'+esc(m.atividade||m.codigo||'-')+'</div><span class="badge '+(alert?'bC':has?'bR':'bN')+'">'+(alert?'ALERTA':has?'COM EVIDÊNCIA':'SEM EVIDÊNCIA')+'</span></div>'+
-      '<div class="drive-card-meta"><strong>'+esc(m.codigo||'-')+'</strong><br>Total localizado: '+num(m.totalEvidencias)+' arquivo(s)<br>Cobertura de categorias: '+num(m.coberturaCategoriasPct)+'%</div>'+
-      '<div class="drive-chips">'+cats+(num(m.evidenciasForaPadrao)>0?'<span class="evchip bad">A validar: '+num(m.evidenciasForaPadrao)+'</span>':'')+'</div>'+
-      (m.erroLeitura?'<div class="critbox">Leitura: '+esc(m.erroLeitura)+'</div>':'')+
-      (m.link?'<a class="drive-open" href="'+esc(m.link)+'" target="_blank" rel="noopener">Abrir evidências</a>':'<div class="empty">Link da pasta não disponível.</div>')+
-    '</div>';
-  }).join('');
-}
-
-function renderEstrutura(){
-  var top=[
-    ['00_GOVERNANCA_E_PLANO_DE_TRABALHO','Governança, instrumento e documentação oficial'],
-    ['01_TERRITORIOS_SEDES','Território operacional do projeto'],
-    ['02_RELATORIOS_CONSOLIDADOS','Relatórios consolidados do projeto'],
-    ['03_CONTROLE_E_LINKS','Planilhas, índices e controles do SMPC'],
-    ['04_COMUNICACAO_GERAL_DO_PROJETO','Comunicação geral'],
-    ['05_MATERIAIS_E_INSUMOS_DO_PROJETO','Materiais e insumos'],
-    ['06_IDENTIDADE_VISUAL','Logomarcas, réguas e arquivos abertos']
-  ];
-  var h='<div class="folder-block"><div class="folder-head"><div>📁 PGO — PROSPERA GO</div><span>PASTA RAIZ OFICIAL</span></div><div class="folder-body">';
-  top.forEach(function(x){h+='<div class="folder-row"><h4>📂 '+esc(x[0])+'</h4><div class="evline">'+esc(x[1])+'</div></div>';});
-  h+='</div></div>';
-
-  h+='<div class="folder-block"><div class="folder-head"><div>📁 GOIAS / 02_ATIVIDADES_E_EVIDENCIAS</div><span>'+AT().length+' ATIVIDADE(S) MONITORADA(S)</span></div><div class="folder-body">';
-  MON().forEach(function(m){
-    var cats=(m.categorias||[]).map(function(c){return '<div class="evline"><strong>'+esc(c.nome)+'</strong>: '+num(c.quantidade)+'</div>';}).join('');
-    h+='<div class="folder-row"><h4>📂 '+esc(m.codigo||'')+' — '+esc(m.atividade||'')+'</h4>'+cats+
-      '<div class="evline"><strong>Total localizado</strong>: '+num(m.totalEvidencias)+' arquivo(s)</div>'+
-      (num(m.evidenciasForaPadrao)>0?'<div class="evline"><strong>Para classificar</strong>: '+num(m.evidenciasForaPadrao)+' arquivo(s)</div>':'')+
-      (m.link?'<div style="margin-top:7px"><a href="'+esc(m.link)+'" target="_blank" rel="noopener">ABRIR PASTA →</a></div>':'')+
-    '</div>';
-  });
-  h+='</div></div>';
-  document.getElementById('estrutura-content').innerHTML=h;
-}
-
-function renderMetas(){
-  var mt=D&&Array.isArray(D.metas)?D.metas:[];
-  var h='<thead><tr><th>ID</th><th>Entregável</th><th>Descrição</th><th>Previsto</th><th>Realizado</th><th>Status</th><th>Observação</th></tr></thead><tbody>';
-  mt.forEach(function(m){
-    h+='<tr><td><strong>'+esc(campo(m,['ID Meta','ID']))+'</strong></td><td>'+esc(campo(m,['Entregável','Entregavel']))+'</td><td>'+esc(campo(m,['Descrição da Meta','Descricao da Meta']))+'</td><td>'+esc(campo(m,['Quantidade Prevista']))+'</td><td><strong>'+esc(campo(m,['Quantidade Realizada']))+'</strong></td><td><span class="badge '+badgeClass(campo(m,['Status']))+'">'+esc(campo(m,['Status'])||'-')+'</span></td><td>'+esc(campo(m,['Observação','Observacao']))+'</td></tr>';
-  });
-  h+=(mt.length?'':'<tr><td colspan="7" class="empty">Nenhuma meta disponível.</td></tr>')+'</tbody>';
-  document.getElementById('tbl-metas').innerHTML=h;
-}
-
-function renderPendencias(pd){
-  var sts=['TODAS'];
-  pd.forEach(function(p){var s=campo(p,['Status','STATUS'])||'Sem status';if(sts.indexOf(s)===-1)sts.push(s);});
-  document.getElementById('f-pend').innerHTML=sts.map(function(s,i){
-    return '<button class="fbtn '+(i===0?'on':'')+'" onclick="filtrarPend(\''+esc(s).replace(/'/g,"\\'")+'\',this)">'+esc(s)+'</button>';
-  }).join('');
-  montarTabelaPend(pd);
-}
-
-function filtrarPend(st,btn){
-  document.querySelectorAll('#f-pend .fbtn').forEach(function(b){b.classList.remove('on');});
-  if(btn) btn.classList.add('on');
-  var arr=D&&Array.isArray(D.pendencias)?D.pendencias:[];
-  if(st!=='TODAS') arr=arr.filter(function(p){return String(campo(p,['Status','STATUS'])||'Sem status')===st;});
-  montarTabelaPend(arr);
-}
-
-function montarTabelaPend(pd){
-  var h='<thead><tr><th>ID</th><th>Pendência</th><th>Categoria</th><th>Status</th><th>Prioridade</th><th>Responsável</th><th>Atualização</th><th>Observação</th></tr></thead><tbody>';
-  pd.forEach(function(p){
-    h+='<tr><td>'+esc(campo(p,['ID']))+'</td><td><strong>'+esc(campo(p,['Pendência','Pendencia']))+'</strong></td><td>'+esc(campo(p,['Categoria']))+'</td><td><span class="badge '+badgeClass(campo(p,['Status']))+'">'+esc(campo(p,['Status'])||'-')+'</span></td><td>'+esc(campo(p,['Prioridade']))+'</td><td>'+esc(campo(p,['Responsável','Responsavel']))+'</td><td>'+esc(campo(p,['Última Atualização','Ultima Atualizacao']))+'</td><td>'+esc(campo(p,['Observação','Observacao']))+'</td></tr>';
-  });
-  h+=(pd.length?'':'<tr><td colspan="8" class="empty">Nenhuma pendência registrada.</td></tr>')+'</tbody>';
-  document.getElementById('tbl-pend').innerHTML=h;
-}
-
-function renderGovernanca(gov){
-  var h='';
-  gov.forEach(function(g){
-    h+='<div class="card gov"><div class="govhead"><strong>'+esc(g.recurso||g.pasta||'-')+'</strong>'+(g.url?'<a href="'+esc(g.url)+'" target="_blank" rel="noopener" style="color:var(--am);font-size:9px">ABRIR PASTA</a>':'')+'</div><div class="govbody">'+
-      '<div class="small" style="margin-bottom:8px"><span class="badge '+badgeClass(g.status)+'">'+esc(g.status||'')+'</span> • '+num(g.contagemCatalogada)+' arquivo(s) catalogado(s)'+(g.ultimaVerificacao?' • verificado em '+esc(g.ultimaVerificacao):'')+'</div>'+
-      (g.erroLeitura?'<div class="small" style="color:var(--rd);margin-bottom:8px">Leitura: '+esc(g.erroLeitura)+'</div>':'');
-    if(!g.arquivos||!g.arquivos.length){h+='<div class="empty">Nenhum documento localizado nesta pasta.</div>';}
-    else{g.arquivos.forEach(function(f){h+='<div class="doc"><div><div class="docname">'+esc(f.nome)+'</div><div class="small">'+esc(f.caminho)+' • '+esc(f.atualizado)+'</div></div><a href="'+esc(f.url)+'" target="_blank" rel="noopener">ABRIR</a></div>';});}
-    h+='</div></div>';
-  });
-  document.getElementById('gov-grid').innerHTML=h||'<div class="card">Governança não localizada.</div>';
-}
-
-function renderAcessos(ac){
-  var h='<thead><tr><th>Recurso</th><th>Tipo</th><th>Status</th><th>Acesso</th><th>Finalidade</th></tr></thead><tbody>';
-  ac.forEach(function(a){
-    var url=String(campo(a,['URL','Url'])||'').trim();
-    h+='<tr><td><strong>'+esc(campo(a,['RECURSO','Recurso']))+'</strong></td><td>'+esc(campo(a,['TIPO DE ACESSO','Tipo de Acesso']))+'</td><td><span class="badge '+badgeClass(campo(a,['STATUS','Status']))+'">'+esc(campo(a,['STATUS','Status'])||'-')+'</span></td><td>'+(url?'<a href="'+esc(url)+'" target="_blank" rel="noopener">ABRIR</a>':'—')+'</td><td>'+esc(campo(a,['FINALIDADE','Finalidade']))+'</td></tr>';
-  });
-  h+=(ac.length?'':'<tr><td colspan="5" class="empty">Nenhum acesso cadastrado.</td></tr>')+'</tbody>';
-  document.getElementById('tbl-acessos').innerHTML=h;
-}
-
-function iniciarAtualizacaoAutomatica(){
-  if(window.__SMPC_PGO_REFRESH__) clearInterval(window.__SMPC_PGO_REFRESH__);
-  window.__SMPC_PGO_REFRESH__=setInterval(function(){carregarApp(true);},5 * 60 * 1000);
-}
-
-window.addEventListener('DOMContentLoaded',function(){
-  document.getElementById('ld').classList.add('off');
-  if(sessionStorage.getItem('pgo_smpc_ok_v2')==='1'){
-    document.getElementById('pwd').classList.add('off');
-    carregarApp(false);
-    iniciarAtualizacaoAutomatica();
-  }else{
-    setTimeout(function(){var f=document.getElementById('pf');if(f)f.focus();},100);
-  }
-});
-</script>
-</body>
-</html>
