@@ -149,15 +149,31 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 .drive-open{display:block;text-align:center;text-decoration:none;background:var(--az);color:var(--am);border-radius:8px;padding:8px 9px;font:700 9.5px Montserrat;text-transform:uppercase;letter-spacing:.3px;margin-top:auto}
 .drive-open:hover{filter:brightness(1.08)}
 
-.folder-block{margin-bottom:18px;background:#fff;border:1.5px solid var(--bd);border-radius:12px;overflow:hidden}
-.folder-head{background:var(--az);color:#fff;padding:12px 16px;font:700 12px Montserrat;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.folder-head span{color:var(--am);font-size:10px}
-.folder-body{padding:14px}
-.folder-row{border:1px solid #e2e7ed;border-radius:9px;padding:11px;background:#fbfcfd;margin-bottom:8px}
-.folder-row:last-child{margin-bottom:0}
-.folder-row h4{font-size:10.5px;color:var(--az);margin-bottom:7px;line-height:1.4}
-.evline{font-size:9.5px;color:#68717d;line-height:1.55}
-.evline strong{color:var(--az)}
+.structure-breadcrumb{background:linear-gradient(135deg,#092040 0%,#0d3768 100%);border-radius:14px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:9px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(9,32,64,.12)}
+.structure-crumb{font:700 11px Montserrat;letter-spacing:.45px;text-transform:uppercase}
+.structure-crumb.main{color:var(--am)}
+.structure-arrow{color:var(--ci);font:700 14px Montserrat}
+.structure-sub{width:100%;font-size:10.5px;color:rgba(255,255,255,.68);margin-top:2px;line-height:1.45}
+.structure-group{margin-top:20px}
+.structure-group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding-left:10px;border-left:4px solid var(--ci)}
+.structure-group-title{font:700 12px Montserrat;color:var(--az);text-transform:uppercase;letter-spacing:.8px}
+.structure-group-count{font:700 9.5px Montserrat;color:#6c7784;background:#fff;border:1px solid var(--bd);border-radius:999px;padding:5px 9px}
+.structure-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.structure-card{background:#fff;border:1.5px solid var(--bd);border-left:5px solid var(--ci);border-radius:13px;padding:16px;min-height:205px;display:flex;flex-direction:column;box-shadow:0 2px 8px rgba(9,32,64,.035)}
+.structure-card.formacao{border-left-color:var(--am)}
+.structure-card.mercado{border-left-color:#0d6f91}
+.structure-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.structure-card-title{font:700 11.5px Montserrat;color:var(--az);line-height:1.4;text-transform:uppercase}
+.structure-card-code{font-size:9px;color:#8893a0;margin-top:3px;letter-spacing:.2px}
+.structure-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:11px}
+.structure-stat{background:#f7f9fb;border:1px solid #e8edf2;border-radius:9px;padding:8px 9px}
+.structure-stat-label{font:700 8.5px Montserrat;color:#84909d;text-transform:uppercase;letter-spacing:.45px}
+.structure-stat-value{font:700 12px Montserrat;color:var(--az);margin-top:3px;line-height:1.3}
+.structure-evidence-title{font:700 9px Montserrat;color:#657180;text-transform:uppercase;letter-spacing:.5px;margin:1px 0 7px}
+.structure-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:auto}
+.structure-chip{font:700 8.5px Montserrat;color:#53606f;background:#edf2f7;border-radius:999px;padding:4px 7px;line-height:1.25}
+.structure-chip.key{background:#e0f7fb;color:#176377}
+.structure-note{font-size:10.5px;color:#697482;line-height:1.5;margin-top:12px}
 
 .alert-card{background:#fff;border:1.5px solid var(--bd);border-left:5px solid var(--am);border-radius:11px;padding:14px}
 .alert-card.crit{border-left-color:var(--rd)}
@@ -179,8 +195,8 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 .fbadge{background:var(--am);color:var(--az);font-size:10.5px;font-weight:700;padding:5px 12px;border-radius:20px;font-family:'Montserrat',sans-serif}
 
 @media(max-width:1050px){.hnav{display:none}}
-@media(max-width:950px){.g4,.g3,.drive-grid,.diag-top{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.g4,.g3,.g2,.drive-grid,.diag-top{grid-template-columns:1fr}.hdri{padding:8px 14px}.hlogo{height:38px;max-width:145px}.hsub,.huser{display:none}.wrap{padding:18px 12px}.evid-hero{align-items:flex-start}.evid-hero-badge{display:none}}
+@media(max-width:950px){.g4,.g3,.drive-grid,.diag-top,.structure-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.g4,.g3,.g2,.drive-grid,.diag-top,.structure-grid{grid-template-columns:1fr}.hdri{padding:8px 14px}.hlogo{height:38px;max-width:145px}.hsub,.huser{display:none}.wrap{padding:18px 12px}.evid-hero{align-items:flex-start}.evid-hero-badge{display:none}}
 </style>
 </head>
 
@@ -325,8 +341,8 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
   </section>
 
   <section class="vw" id="vw-estrutura">
-    <div class="st">Estrutura do Drive e das Evidências</div>
-    <div class="notice" style="margin-bottom:14px">Estrutura oficial do Prospera GO após a migração para o padrão SMPC, com atalhos controlados para as pastas monitoradas.</div>
+    <div class="st">Mapa da Estrutura do Projeto</div>
+    <div class="notice" style="margin-bottom:14px">Visualização compacta da organização do Prospera GO por atividade e categoria de evidência. Os atalhos para o Google Drive ficam exclusivamente na área <strong>Evidências Drive</strong>.</div>
     <div id="estrutura-content"></div>
   </section>
 
@@ -763,29 +779,87 @@ function renderEvidenciasDrive(){
 }
 
 function renderEstrutura(){
-  var top=[
-    ['00_GOVERNANCA_E_PLANO_DE_TRABALHO','Governança, instrumento e documentação oficial'],
-    ['01_TERRITORIOS_SEDES','Território operacional do projeto'],
-    ['02_RELATORIOS_CONSOLIDADOS','Relatórios consolidados do projeto'],
-    ['03_CONTROLE_E_LINKS','Planilhas, índices e controles do SMPC'],
-    ['04_COMUNICACAO_GERAL_DO_PROJETO','Comunicação geral'],
-    ['05_MATERIAIS_E_INSUMOS_DO_PROJETO','Materiais e insumos'],
-    ['06_IDENTIDADE_VISUAL','Logomarcas, réguas e arquivos abertos']
+  var grupos=[
+    {
+      titulo:'Gestão e preparação',
+      classe:'gestao',
+      itens:[
+        {codigo:'GERENCIAMENTO', evidencias:['Relatório de Atividade']},
+        {codigo:'COMUNICACAO', evidencias:['Relatório de Atividade','Peças de Comunicação']},
+        {codigo:'MAPEAMENTO_EMPREENDIMENTOS', evidencias:['Questionários','Bases / Mapas','Registros de Campo']},
+        {codigo:'RELATORIO_EMPREENDIMENTOS', evidencias:['Relatório de Perfil']}
+      ]
+    },
+    {
+      titulo:'Formação',
+      classe:'formacao',
+      itens:[
+        {codigo:'SEMINARIOS_FORMACAO', evidencias:['Ficha','Presença','Fotos','Vídeos','Certificados','Materiais','Cards','Plano de Ensino','Relatório']},
+        {codigo:'OFICINAS_PRESENCIAIS', evidencias:['Ficha','Presença','Fotos','Vídeos','Certificados','Materiais','Cards','Plano de Ensino','Relatório']},
+        {codigo:'OFICINAS_ONLINE', evidencias:['Ficha','Presença','Fotos','Vídeos','Certificados','Materiais','Cards','Plano de Ensino','Relatório']},
+        {codigo:'PALESTRAS_COMUNITARIAS', evidencias:['Ficha','Presença','Fotos','Vídeos','Certificados','Materiais','Cards','Plano de Ensino','Relatório']}
+      ]
+    },
+    {
+      titulo:'Atendimento e mercado',
+      classe:'mercado',
+      itens:[
+        {codigo:'DIAGNOSTICOS_NEGOCIOS', evidencias:['Ficha de Atendimento','Diagnóstico Produzido','Evidências Complementares']},
+        {codigo:'CONSULTORIAS_NEGOCIOS', evidencias:['Ficha de Atendimento','Relatório de Consultoria','Evidências Complementares']},
+        {codigo:'FEIRA_NEGOCIOS', evidencias:['Ficha','Presença','Fotos','Vídeos','Certificados','Materiais','Cards','Plano de Ensino','Relatório']}
+      ]
+    }
   ];
-  var h='<div class="folder-block"><div class="folder-head"><div>📁 PGO — PROSPERA GO</div><span>PASTA RAIZ OFICIAL</span></div><div class="folder-body">';
-  top.forEach(function(x){h+='<div class="folder-row"><h4>📂 '+esc(x[0])+'</h4><div class="evline">'+esc(x[1])+'</div></div>';});
-  h+='</div></div>';
 
-  h+='<div class="folder-block"><div class="folder-head"><div>📁 GOIAS / 02_ATIVIDADES_E_EVIDENCIAS</div><span>'+AT().length+' ATIVIDADE(S) MONITORADA(S)</span></div><div class="folder-body">';
-  MON().forEach(function(m){
-    var cats=(m.categorias||[]).map(function(c){return '<div class="evline"><strong>'+esc(c.nome)+'</strong>: '+num(c.quantidade)+'</div>';}).join('');
-    h+='<div class="folder-row"><h4>📂 '+esc(m.codigo||'')+' — '+esc(m.atividade||'')+'</h4>'+cats+
-      '<div class="evline"><strong>Total localizado</strong>: '+num(m.totalEvidencias)+' arquivo(s)</div>'+
-      (num(m.evidenciasForaPadrao)>0?'<div class="evline"><strong>Para classificar</strong>: '+num(m.evidenciasForaPadrao)+' arquivo(s)</div>':'')+
-      (m.link?'<div style="margin-top:7px"><a href="'+esc(m.link)+'" target="_blank" rel="noopener">ABRIR PASTA →</a></div>':'')+
+  function achar(codigo){
+    var rows=AT();
+    for(var i=0;i<rows.length;i++){
+      if(codAtiv(rows[i])===codigo) return rows[i];
+    }
+    return null;
+  }
+
+  function card(item,classe){
+    var a=achar(item.codigo);
+    var nome=a?nomeAtiv(a):item.codigo.replace(/_/g,' ');
+    var previsto=a?num(campo(a,['Quantidade Prevista'])):0;
+    var realizado=a?num(campo(a,['Quantidade Realizada'])):0;
+    var unidade=a?String(campo(a,['Unidade'])||'unidades').trim():'unidades';
+    var status=a?String(campo(a,['Status'])||'Pendente').trim():'Sem dado';
+    var chips=item.evidencias.map(function(ev,idx){return '<span class="structure-chip '+(idx===0?'key':'')+'">'+esc(ev)+'</span>';}).join('');
+
+    return '<div class="structure-card '+esc(classe)+'">'+
+      '<div class="structure-card-head">'+
+        '<div><div class="structure-card-title">'+esc(nome)+'</div><div class="structure-card-code">'+esc(item.codigo)+'</div></div>'+
+        '<span class="badge '+badgeClass(status)+'">'+esc(status)+'</span>'+
+      '</div>'+
+      '<div class="structure-stats">'+
+        '<div class="structure-stat"><div class="structure-stat-label">Meta</div><div class="structure-stat-value">'+previsto+' '+esc(unidade)+'</div></div>'+
+        '<div class="structure-stat"><div class="structure-stat-label">Realizado</div><div class="structure-stat-value">'+realizado+'</div></div>'+
+        '<div class="structure-stat"><div class="structure-stat-label">Unidades previstas</div><div class="structure-stat-value">'+previsto+'</div></div>'+
+        '<div class="structure-stat"><div class="structure-stat-label">Estrutura</div><div class="structure-stat-value">'+item.evidencias.length+' categoria(s)</div></div>'+
+      '</div>'+
+      '<div class="structure-evidence-title">Categorias de evidência</div>'+
+      '<div class="structure-chips">'+chips+'</div>'+
     '</div>';
+  }
+
+  var h='<div class="structure-breadcrumb">'+
+    '<span class="structure-crumb main">PROSPERA GO</span><span class="structure-arrow">›</span>'+
+    '<span class="structure-crumb">GOIÁS</span><span class="structure-arrow">›</span>'+
+    '<span class="structure-crumb">ATIVIDADES E EVIDÊNCIAS</span>'+
+    '<div class="structure-sub">Mapa visual do projeto. A Estrutura mostra organização e categorias; os links operacionais permanecem em Evidências Drive.</div>'+
+  '</div>';
+
+  grupos.forEach(function(g){
+    h+='<div class="structure-group">'+
+      '<div class="structure-group-head"><div class="structure-group-title">'+esc(g.titulo)+'</div><div class="structure-group-count">'+g.itens.length+' atividade(s)</div></div>'+
+      '<div class="structure-grid">';
+    g.itens.forEach(function(item){h+=card(item,g.classe);});
+    h+='</div></div>';
   });
-  h+='</div></div>';
+
+  h+='<div class="structure-note">Esta visão não expõe a árvore técnica de governança nem repete atalhos do Drive. A comprovação documental continua sendo acompanhada pelas áreas Atividades e Evidências Drive.</div>';
   document.getElementById('estrutura-content').innerHTML=h;
 }
 
