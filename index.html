@@ -175,6 +175,31 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 .structure-chip.key{background:#e0f7fb;color:#176377}
 .structure-note{font-size:10.5px;color:#697482;line-height:1.5;margin-top:12px}
 
+
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.meta-card{background:#fff;border:1.5px solid var(--bd);border-top:5px solid var(--ci);border-radius:14px;padding:17px 18px;display:flex;flex-direction:column;min-height:285px;box-shadow:0 3px 10px rgba(9,32,64,.04)}
+.meta-card.risco{border-top-color:var(--am)}
+.meta-card.atrasada{border-top-color:#c9940a}
+.meta-card.prazo{border-top-color:var(--gv)}
+.meta-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.meta-id{font:700 10px Montserrat;color:var(--ci);letter-spacing:.55px;text-transform:uppercase;margin-bottom:4px}
+.meta-title{font:700 13px Montserrat;color:var(--az);line-height:1.35}
+.meta-desc{font-size:10.5px;color:#6f7884;line-height:1.5;margin-top:5px}
+.meta-kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:2px 0 10px}
+.meta-kpi{background:#f7f9fb;border:1px solid #e7ecf1;border-radius:9px;padding:9px 10px}
+.meta-kpi-label{font:700 8.5px Montserrat;color:#8793a0;text-transform:uppercase;letter-spacing:.45px}
+.meta-kpi-value{font:700 12px Montserrat;color:var(--az);margin-top:4px;line-height:1.35}
+.meta-agent{background:#eefafd;border:1px solid #c6eef5;border-left:4px solid var(--ci);border-radius:10px;padding:10px 11px;margin-top:1px}
+.meta-agent-title{font:700 9px Montserrat;color:#176377;text-transform:uppercase;letter-spacing:.55px;margin-bottom:4px}
+.meta-agent-text{font-size:10.5px;color:#4f6570;line-height:1.5}
+.meta-progress{margin-top:auto;padding-top:13px}
+.meta-progress-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+.meta-progress-label{font:700 9px Montserrat;color:#657180;text-transform:uppercase;letter-spacing:.35px}
+.meta-progress-value{font:700 11px Montserrat;color:var(--az)}
+.meta-bar{height:9px;background:#e5eaf0;border-radius:999px;overflow:hidden}
+.meta-bar-fill{height:100%;background:var(--ci);border-radius:999px;min-width:0;transition:width .5s ease}
+.meta-period{font-size:9.5px;color:#77838f;margin-top:7px}
+
 .alert-card{background:#fff;border:1.5px solid var(--bd);border-left:5px solid var(--am);border-radius:11px;padding:14px}
 .alert-card.crit{border-left-color:var(--rd)}
 .alert-title{font:700 11px Montserrat;color:var(--az);margin:7px 0 5px}
@@ -195,8 +220,8 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 .fbadge{background:var(--am);color:var(--az);font-size:10.5px;font-weight:700;padding:5px 12px;border-radius:20px;font-family:'Montserrat',sans-serif}
 
 @media(max-width:1050px){.hnav{display:none}}
-@media(max-width:950px){.g4,.g3,.drive-grid,.diag-top,.structure-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.g4,.g3,.g2,.drive-grid,.diag-top,.structure-grid{grid-template-columns:1fr}.hdri{padding:8px 14px}.hlogo{height:38px;max-width:145px}.hsub,.huser{display:none}.wrap{padding:18px 12px}.evid-hero{align-items:flex-start}.evid-hero-badge{display:none}}
+@media(max-width:950px){.g4,.g3,.drive-grid,.diag-top,.structure-grid,.meta-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.g4,.g3,.g2,.drive-grid,.diag-top,.structure-grid,.meta-grid{grid-template-columns:1fr}.hdri{padding:8px 14px}.hlogo{height:38px;max-width:145px}.hsub,.huser{display:none}.wrap{padding:18px 12px}.evid-hero{align-items:flex-start}.evid-hero-badge{display:none}}
 </style>
 </head>
 
@@ -348,7 +373,8 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 
   <section class="vw" id="vw-metas">
     <div class="st">Metas e Indicadores</div>
-    <div class="tblwrap"><table class="tbl" id="tbl-metas"></table></div>
+    <div class="notice" style="margin-bottom:14px">Visão executiva das metas do Plano de Trabalho, com leitura simplificada do Agente e progresso físico de cada entrega.</div>
+    <div class="meta-grid" id="metas-content"></div>
   </section>
 
 
@@ -863,14 +889,98 @@ function renderEstrutura(){
   document.getElementById('estrutura-content').innerHTML=h;
 }
 
+function metaNumeroPrevisto_(m){
+  var previsto=String(campo(m,['Quantidade Prevista'])||'').trim();
+  var match=previsto.match(/\d+/);
+  return match?Number(match[0]):0;
+}
+
+function metaPeriodo_(m){
+  var obs=String(campo(m,['Observação','Observacao'])||'');
+  var match=obs.match(/Janela do cronograma:\s*([0-9]{4}-[0-9]{2})\s*a\s*([0-9]{4}-[0-9]{2})/i);
+  if(!match) return 'Não informado';
+  return match[1]===match[2]?match[1]:match[1]+' a '+match[2];
+}
+
+function metaClasse_(status){
+  var st=norm(status);
+  if(st.indexOf('atras')!==-1) return 'atrasada';
+  if(st.indexOf('risco')!==-1) return 'risco';
+  if(st.indexOf('prazo')!==-1) return 'prazo';
+  return '';
+}
+
+function metaUnidadeLeitura_(m){
+  var id=String(campo(m,['ID Meta','ID'])||'').trim();
+  var previsto=String(campo(m,['Quantidade Prevista'])||'').toLowerCase();
+  if(id==='M1'||id==='M2'||previsto.indexOf('contínuo')!==-1||previsto.indexOf('continuo')!==-1) return ['período','períodos'];
+  if(previsto.indexOf('question')!==-1) return ['questionário','questionários'];
+  if(previsto.indexOf('relatório')!==-1||previsto.indexOf('relatorio')!==-1) return ['relatório','relatórios'];
+  if(previsto.indexOf('semin')!==-1) return ['seminário','seminários'];
+  if(previsto.indexOf('oficina')!==-1) return ['oficina','oficinas'];
+  if(previsto.indexOf('palestra')!==-1) return ['palestra','palestras'];
+  if(previsto.indexOf('diagn')!==-1) return ['diagnóstico','diagnósticos'];
+  if(previsto.indexOf('consult')!==-1) return ['consultoria','consultorias'];
+  if(previsto.indexOf('feira')!==-1) return ['feira','feiras'];
+  return ['unidade','unidades'];
+}
+
+function metaLeituraAgente_(m,realizado,previsto){
+  var status=norm(campo(m,['Status']));
+  var unidade=metaUnidadeLeitura_(m);
+  var nome=realizado===1?unidade[0]:unidade[1];
+  if(previsto>0&&realizado>=previsto){
+    return 'Meta comprovada: '+realizado+' '+nome+' registradas até o momento.';
+  }
+  if(realizado>0){
+    return realizado+' de '+previsto+' '+(previsto===1?unidade[0]:unidade[1])+' comprovadas até o momento.';
+  }
+  if(status.indexOf('prazo')!==-1){
+    return 'Ainda não há execução física comprovada; a meta permanece dentro da janela prevista.';
+  }
+  if(unidade[0]==='período'){
+    return 'Ainda não há período comprovado. O acompanhamento exige atenção ao cronograma.';
+  }
+  return 'Nenhum '+unidade[0]+' foi comprovado até o momento.';
+}
+
 function renderMetas(){
   var mt=D&&Array.isArray(D.metas)?D.metas:[];
-  var h='<thead><tr><th>ID</th><th>Entregável</th><th>Descrição</th><th>Previsto</th><th>Realizado</th><th>Status</th><th>Observação</th></tr></thead><tbody>';
-  mt.forEach(function(m){
-    h+='<tr><td><strong>'+esc(campo(m,['ID Meta','ID']))+'</strong></td><td>'+esc(campo(m,['Entregável','Entregavel']))+'</td><td>'+esc(campo(m,['Descrição da Meta','Descricao da Meta']))+'</td><td>'+esc(campo(m,['Quantidade Prevista']))+'</td><td><strong>'+esc(campo(m,['Quantidade Realizada']))+'</strong></td><td><span class="badge '+badgeClass(campo(m,['Status']))+'">'+esc(campo(m,['Status'])||'-')+'</span></td><td>'+esc(campo(m,['Observação','Observacao']))+'</td></tr>';
-  });
-  h+=(mt.length?'':'<tr><td colspan="7" class="empty">Nenhuma meta disponível.</td></tr>')+'</tbody>';
-  document.getElementById('tbl-metas').innerHTML=h;
+  var el=document.getElementById('metas-content');
+  if(!mt.length){
+    el.innerHTML='<div class="card empty">Nenhuma meta disponível.</div>';
+    return;
+  }
+
+  el.innerHTML=mt.map(function(m){
+    var id=String(campo(m,['ID Meta','ID'])||'').trim();
+    var titulo=String(campo(m,['Entregável','Entregavel'])||'Meta do projeto').trim();
+    var desc=String(campo(m,['Descrição da Meta','Descricao da Meta'])||'').trim();
+    var previstoTxt=String(campo(m,['Quantidade Prevista'])||'-').trim();
+    var realizado=num(campo(m,['Quantidade Realizada']));
+    var previsto=metaNumeroPrevisto_(m);
+    var status=String(campo(m,['Status'])||'-').trim();
+    var pct=previsto>0?Math.max(0,Math.min(100,Math.round((realizado/previsto)*100))):0;
+    var periodo=metaPeriodo_(m);
+    var leitura=metaLeituraAgente_(m,realizado,previsto);
+
+    return '<div class="meta-card '+metaClasse_(status)+'">'+
+      '<div class="meta-card-head">'+
+        '<div><div class="meta-id">'+esc(id||'META')+'</div><div class="meta-title">'+esc(titulo)+'</div><div class="meta-desc">'+esc(desc)+'</div></div>'+
+        '<span class="badge '+badgeClass(status)+'">'+esc(status)+'</span>'+
+      '</div>'+
+      '<div class="meta-kpis">'+
+        '<div class="meta-kpi"><div class="meta-kpi-label">Meta</div><div class="meta-kpi-value">'+esc(previstoTxt)+'</div></div>'+
+        '<div class="meta-kpi"><div class="meta-kpi-label">Realizado</div><div class="meta-kpi-value">'+realizado+'</div></div>'+
+      '</div>'+
+      '<div class="meta-agent"><div class="meta-agent-title">Leitura do Agente</div><div class="meta-agent-text">'+esc(leitura)+'</div></div>'+
+      '<div class="meta-progress">'+
+        '<div class="meta-progress-top"><div class="meta-progress-label">Progresso físico</div><div class="meta-progress-value">'+realizado+' de '+previsto+' · '+pct+'%</div></div>'+
+        '<div class="meta-bar"><div class="meta-bar-fill" style="width:'+pct+'%"></div></div>'+
+        '<div class="meta-period">Período: '+esc(periodo)+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
 function iniciarAtualizacaoAutomatica(){
