@@ -126,6 +126,10 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
 .activity-meta{font-size:10.5px;color:#718096;line-height:1.5}
 .activity-rule{font-size:10px;color:#657180;line-height:1.5;margin-top:8px}
 .activity-open{display:block;text-align:center;text-decoration:none;background:var(--az);color:var(--am);border-radius:8px;padding:8px 9px;font:700 9.5px Montserrat;text-transform:uppercase;letter-spacing:.3px;margin-top:auto}
+.activity-links{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.activity-links .activity-open{margin-top:0}
+.docs-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.docs-actions .diag-link{margin-top:0}
 
 .evid-hero{background:linear-gradient(135deg,#092040 0%,#0c315f 100%);border-radius:14px;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;color:#fff;box-shadow:0 8px 24px rgba(9,32,64,.14)}
 .evid-hero-title{font:700 18px Montserrat;color:var(--am);letter-spacing:.7px}
@@ -309,6 +313,9 @@ h1,h2,h3,h4{font-family:'Montserrat',Arial,sans-serif}
       A estrutura operacional abaixo é somente leitura. O Index não move, renomeia, exclui nem duplica arquivos.
       <div style="margin-top:10px"><a class="diag-link secondary" href="https://drive.google.com/drive/folders/1PhTAPDo62WYbpxTJu_Sj3ITTLzZNEwx5" target="_blank" rel="noopener">Abrir Drive Raiz</a></div>
     </div>
+
+    <div class="st">Documentos Pedagógicos</div>
+    <div class="card" id="documentos-pedagogicos-card"></div>
   </section>
 
 
@@ -393,6 +400,34 @@ var FILTRO_ATIVIDADES = 'TODAS';
 var FILTRO_EVIDENCIAS = 'TODAS';
 var SENHA = "Brarte@2026";
 var APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4aQbDaVDHzpg-rMhU-B4iljj1390o3bbsxWbQRg_sfn5EbNTXH1FJxhCG2mNh3y-Euw/exec";
+
+// Acessos complementares — inclusão aditiva. Não interferem na API, agente, metas ou evidências.
+var PGO_LINKS_COMPLEMENTARES = {
+  documentosPedagogicos: [
+    {rotulo:'Caderno Pedagógico', url:'https://drive.google.com/file/d/1ZGrDgN3GlQX1kCCJEm8oJxUl88YM9mcB/view'},
+    {rotulo:'Plano Pedagógico Geral', url:'https://drive.google.com/file/d/15eF0Q-30s501H3WYrctHAKLPtVWuZegy/view'},
+    {rotulo:'Plano Pedagógico Meta 4 · Formação de Lideranças', url:'https://drive.google.com/file/d/15y3D-Bw-xEd9kisNwoRo4lHnD-SPz44U/view'},
+    {rotulo:'Plano Pedagógico Meta 5 · Capacitação Técnica', url:'https://drive.google.com/file/d/1JOvCqTqNiADcgCY94yuYocX36XKzUoDM/view'},
+    {rotulo:'Desenvolvimento Comunitário e Parcerias', url:'https://drive.google.com/file/d/1ZZT2vg8-bueg3ID2D7oDnogYqZ7IlnKx/view'}
+  ],
+  oficinasPresenciais: [
+    {rotulo:'Plano de Aula 01 · Margem de Lucro e Formação de Preço', url:'https://drive.google.com/file/d/1ve37spo4qJdY4853YCesEq7vMwvL28L5/view'},
+    {rotulo:'Plano de Aula 02 · Vendas e Atendimento pelo WhatsApp', url:'https://drive.google.com/file/d/1lM0_Jok1_xBPaQIx_I1YFy10Aw1AOlhZ/view'},
+    {rotulo:'Plano de Aula 03 · Jornada do Cliente e Comportamento de Compra', url:'https://drive.google.com/file/d/1rylDbfZF7xRPaf0nX2kG9CR7vVWzKV0k/view'},
+    {rotulo:'Plano de Aula 04 · Instagram e Conteúdo que Vende', url:'https://drive.google.com/file/d/1bghkWrfwgvZIXjOn0-qCHndVZzwwuXs5/view'},
+    {rotulo:'Plano de Aula 05 · Estratégia de Preço e Competitividade', url:'https://drive.google.com/file/d/1l9Ky2RIeZmpJt9aTcNRSDchBOU-38ckf/view'},
+    {rotulo:'Plano de Aula 06 · Valor, Preço e Estrutura de Venda', url:'https://drive.google.com/file/d/1-0XIYkGixApzbpatk0X9LmRCne98964p/view'}
+  ],
+  seminarios: [
+    {rotulo:'Plano Pedagógico · TikTok para Negócios', url:'https://drive.google.com/file/d/1IJephFyrbspwKGg37Oz2kLya9s_2YtPU/view'},
+    {rotulo:'Plano Pedagógico · Discurso de Vendas', url:'https://drive.google.com/file/d/1YMWJdUVkVKTgNWlUxd9bG1nknU4XXJpP/view'}
+  ],
+  consolidadoPesquisa: {
+    rotulo:'Consolidado da Pesquisa',
+    url:'https://drive.google.com/file/d/1WSYdsbnlnUr-hD9Fz3bHEFl-CpvG-7-B/view',
+    editavel:'https://docs.google.com/document/d/1rqtjw4N3YmGRLKqccrSuGs5Puq0hgwGl/edit'
+  }
+};
 
 function esc(v){
   return String(v==null?'':v)
@@ -519,6 +554,7 @@ function carregarApp(silencioso){
 function renderAll(){
   renderUser();
   renderFicha();
+  renderDocumentosPedagogicos();
   renderProducao();
   renderAlertasDashboard();
   renderDash();
@@ -546,6 +582,18 @@ function renderFicha(){
       '<div><div class="ficha-rot">Vigência</div><div class="ficha-val">'+esc(f.vigencia||'-')+'</div></div>'+
       '<div><div class="ficha-rot">Instituição</div><div class="ficha-val">'+esc(f.instituto||'Instituto BR Arte')+'</div></div>'+
     '</div>';
+}
+
+function renderDocumentosPedagogicos(){
+  var el=document.getElementById('documentos-pedagogicos-card');
+  if(!el) return;
+  var docs=PGO_LINKS_COMPLEMENTARES.documentosPedagogicos||[];
+  el.innerHTML=
+    '<div style="font:700 14px Montserrat;color:var(--az)">Documentos Pedagógicos do Prospera GO</div>'+
+    '<div style="font-size:11px;color:#718096;line-height:1.55;margin-top:5px">Caderno e Planos Pedagógicos Norteadores vinculados ao Plano de Trabalho e ao Termo de Fomento.</div>'+
+    '<div class="docs-actions">'+docs.map(function(d,i){
+      return '<a class="diag-link '+(i===0?'':'secondary')+'" href="'+esc(d.url)+'" target="_blank" rel="noopener">'+esc(d.rotulo)+'</a>';
+    }).join('')+'</div>';
 }
 
 function atividadePorCodigo(c){
@@ -717,6 +765,20 @@ function atividadePassaFiltro(a){
   return true;
 }
 
+function linksComplementaresAtividade(a){
+  var codigo=codAtiv(a);
+  if(codigo==='OFICINAS_PRESENCIAIS') return PGO_LINKS_COMPLEMENTARES.oficinasPresenciais||[];
+  if(codigo==='SEMINARIOS_FORMACAO') return PGO_LINKS_COMPLEMENTARES.seminarios||[];
+  return [];
+}
+
+function botoesComplementaresAtividade(a){
+  var links=linksComplementaresAtividade(a);
+  return links.map(function(item){
+    return '<a class="activity-open" href="'+esc(item.url)+'" target="_blank" rel="noopener">'+esc(item.rotulo)+'</a>';
+  }).join('');
+}
+
 function activityCard(a){
   var r=num(campo(a,['Quantidade Realizada']));
   var p=num(campo(a,['Quantidade Prevista']));
@@ -735,7 +797,10 @@ function activityCard(a){
     '<div class="sbw" style="height:8px"><div class="sb '+scl(pc)+'" style="width:'+pc+'%"></div></div>'+
     '<div class="activity-rule">'+esc(campo(a,['Regra de Comprovação'])||'')+'</div>'+
     (m&&num(m.evidenciasForaPadrao)>0?'<div class="warnbox" style="margin-top:9px">'+num(m.evidenciasForaPadrao)+' arquivo(s) preservado(s) para classificação e não contabilizado(s) como ocorrência concluída.</div>':'')+
-    (link?'<a class="activity-open" href="'+esc(link)+'" target="_blank" rel="noopener">Abrir pasta da atividade</a>':'')+
+    '<div class="activity-links">'+
+      botoesComplementaresAtividade(a)+
+      (link?'<a class="activity-open" href="'+esc(link)+'" target="_blank" rel="noopener">Abrir pasta da atividade</a>':'')+
+    '</div>'+
   '</div>';
 }
 
@@ -963,6 +1028,9 @@ function renderMetas(){
     var pct=previsto>0?Math.max(0,Math.min(100,Math.round((realizado/previsto)*100))):0;
     var periodo=metaPeriodo_(m);
     var leitura=metaLeituraAgente_(m,realizado,previsto);
+    var extraMeta=id==='M3'
+      ? '<a class="activity-open" style="margin-top:12px" href="'+esc(PGO_LINKS_COMPLEMENTARES.consolidadoPesquisa.url)+'" target="_blank" rel="noopener">Consolidado da Pesquisa</a>'
+      : '';
 
     return '<div class="meta-card '+metaClasse_(status)+'">'+
       '<div class="meta-card-head">'+
@@ -979,6 +1047,7 @@ function renderMetas(){
         '<div class="meta-bar"><div class="meta-bar-fill" style="width:'+pct+'%"></div></div>'+
         '<div class="meta-period">Período: '+esc(periodo)+'</div>'+
       '</div>'+
+      extraMeta+
     '</div>';
   }).join('');
 }
